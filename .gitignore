@@ -1,0 +1,8 @@
+Results_Generator.ipynb
+./.ipynb_checkpoints/*
+__pycache__/*
+__pycache__
+.venv/*
+.venv
+Aquisicao/*
+Aquisicao
