@@ -15,6 +15,8 @@ def preprocess(a, b, c):
     b = b-b.mean()
     c = c-c.mean()
 
+    a = -a
+
     #filter
     a = savgol_filter(a, 100, 2)
     c = savgol_filter(c, 100, 2)

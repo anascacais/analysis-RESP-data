@@ -20,23 +20,31 @@ def get_participant_ids():
     return id_participants
 
 
-
-
 def get_data_by_id_activity(save=False):
+    '''
+    Returns
+    -------
+    data: dict
+        Dictionary where keys are, recursively, participant ID and then activity. The last "value" corresponds to a pd.DataFrame with the resp signal timeseries for ['scientisst', 'biopac', 'bitalino']
+    
+    ''' 
 
     id_participants = get_participant_ids()
 
     data = {}
+    data_raw = {}
 
     for id in id_participants:
         print('---------',id,'---------------')
         scientisst_data, biopac_data, bitalino_data, activities_info = load_data('Aquisicao', id, resp_only=True)
 
         data[id] = {}
+        data_raw[id] = {}
 
         for activity in activities_info.keys():
 
             data[id][activity] = pd.DataFrame(columns=['scientisst', 'biopac', 'bitalino'])
+            data_raw[id][activity] = pd.DataFrame(columns=['scientisst', 'biopac', 'bitalino'])
 
             a = scientisst_data['RESP'][activities_info[activity]['start_ind_scientisst'] : activities_info[activity]['start_ind_scientisst'] + activities_info[activity]['length']]
             b = biopac_data['airflow'][activities_info[activity]['start_ind_biopac'] : activities_info[activity]['start_ind_biopac'] + activities_info[activity]['length']]
@@ -48,12 +56,16 @@ def get_data_by_id_activity(save=False):
             data[id][activity]['biopac'] = biopac_data_processed
             data[id][activity]['bitalino'] = bitalino_data_processed
 
+            data_raw[id][activity]['scientisst'] = a.values
+            data_raw[id][activity]['biopac'] = b.values
+            data_raw[id][activity]['bitalino'] = c.values
+
 
     if save:
         with open(os.path.join('Results', 'data_by_participant_activity.pickle'), 'wb') as file:
             pickle.dump(data, file, protocol=pickle.HIGHEST_PROTOCOL) 
 
-    return data
+    return data, data_raw
 
 
 

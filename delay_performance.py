@@ -3,11 +3,12 @@ import numpy as np
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 from scipy import stats
+
 import plotly.io as pio   
 pio.kaleido.scope.mathjax = None
 
 # local
-from color_palettes import CATEGORICAL_PALETTE
+from constants import CATEGORICAL_PALETTE
 
 def normality_test(data, sensor, type, categorical_palette=None):
 
@@ -116,7 +117,7 @@ def plot_inspiration_vs_expiration(delays_df, categorical_palette=None):
         yaxis = {
             'title': 'Delay (in seconds)'
         },
-        height=800, 
+        height=600, 
         width=600, 
         template='plotly_white', 
         violinmode='overlay'

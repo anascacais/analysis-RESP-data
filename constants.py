@@ -1,0 +1,9 @@
+
+
+#CATEGORICAL_PALETTE = ['#2080AF', '#E38642', '#76B5C7', '#EBB675', '#0F3970', '#873C26']
+CATEGORICAL_PALETTE = ['#4179A0', '#A0415D', '#44546A', '#44AA97', '#FFC000']
+DEVICE_INFO = {
+    "biopac": {"sensor": "Airflow", "name": "BIOPAC"}, 
+    "scientisst": {"sensor": "MAG", "name": "ScientISST"}, 
+    "bitalino": {"sensor": "PZT", "name": "BITalino"}
+}

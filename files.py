@@ -27,8 +27,17 @@ def load_data(directory, id, resp_only=True):
     scientisst_data = pd.read_csv(os.path.join(directory, id, f'scientisst_{id}.csv'), sep=',',  skiprows=2, index_col=False, names=["NSeq", "ECG", "ACC1", "ACC2", "ACC3", "LED", "RESP"], usecols=["ECG", "ACC1", "ACC2", "ACC3", "LED", "RESP"])
     bitalino_data = pd.read_csv(os.path.join(directory, id, f'bitalino_{id}.txt'), sep='\t',  skiprows=3, index_col=False, names=["nSeq", "I1", "I2", "O1", "O2", "PZT", "LUX", "A3", "A4", "A5", "A6"], usecols=["PZT", "LUX"])
     
-    scientisst_data.RESP = -scientisst_data.RESP
+    #scientisst_data.RESP = -scientisst_data.RESP
     
+    # to mv
+    scientisst_data[["RESP"]] = ((scientisst_data[["RESP"]] * 3.3) / (2**12)) * 1000
+    bitalino_data[["PZT"]] = ((bitalino_data[["PZT"]] * 3.3) / (2**10)) * 1000
+
+    # to ml/s
+    with open(f"Aquisicao/Cali_factors.json", "r") as jsonFile:
+        cali_factors = json.load(jsonFile)
+    biopac_data[["airflow"]] = biopac_data[["airflow"]] * cali_factors[id]
+
     if resp_only:
         biopac_data = biopac_data[["airflow"]]
         scientisst_data = scientisst_data[["RESP"]]
