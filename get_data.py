@@ -3,7 +3,7 @@ import pandas as pd
 import pickle 
 
 # local
-from files import load_data
+from files import load_raw_data
 from processing import preprocess
 
 # built-in
@@ -12,53 +12,56 @@ import json
 
 
 
-def get_participant_ids():
-    f = open(os.path.join('Aquisicao', 'Cali_factors.json'))
+def get_participant_ids(acquisition_folderpath):
+    f = open(os.path.join(acquisition_folderpath, 'Cali_factors.json'))
     data = json.load(f)
     f.close()
     id_participants = data.keys()
     return id_participants
 
 
-def get_data_by_id_activity(save=False):
+def get_data_by_id_activity(acquisition_folderpath, save=False):
     '''
     Returns
     -------
     data: dict
-        Dictionary where keys are, recursively, participant ID and then activity. The last "value" corresponds to a pd.DataFrame with the resp signal timeseries for ['scientisst', 'biopac', 'bitalino']
+        Dictionary where keys are, recursively, participant ID and then activity. The last "value" corresponds to a pd.DataFrame with the resp signal timeseries for ['mag', 'airflow', 'pzt']
     
     ''' 
 
-    id_participants = get_participant_ids()
+    id_participants = get_participant_ids(acquisition_folderpath)
 
     data = {}
     data_raw = {}
-
+    print('Getting data for participants...')
     for id in id_participants:
-        print('---------',id,'---------------')
-        scientisst_data, biopac_data, bitalino_data, activities_info = load_data('Aquisicao', id, resp_only=True)
+        print(' ---------',id,'---------------')
+        mag_data, airflow_data, pzt_data = load_raw_data(acquisition_folderpath, id)
+
+        with open(os.path.join(acquisition_folderpath, id, f'idx_{id}.json'), "r") as jsonFile:
+            activities_info = json.load(jsonFile)
 
         data[id] = {}
         data_raw[id] = {}
 
         for activity in activities_info.keys():
 
-            data[id][activity] = pd.DataFrame(columns=['scientisst', 'biopac', 'bitalino'])
-            data_raw[id][activity] = pd.DataFrame(columns=['scientisst', 'biopac', 'bitalino'])
+            data[id][activity] = pd.DataFrame(columns=['mag', 'airflow', 'pzt'])
+            data_raw[id][activity] = pd.DataFrame(columns=['mag', 'airflow', 'pzt'])
 
-            a = scientisst_data['RESP'][activities_info[activity]['start_ind_scientisst'] : activities_info[activity]['start_ind_scientisst'] + activities_info[activity]['length']]
-            b = biopac_data['airflow'][activities_info[activity]['start_ind_biopac'] : activities_info[activity]['start_ind_biopac'] + activities_info[activity]['length']]
-            c = bitalino_data['PZT'][activities_info[activity]['start_ind_bitalino'] : activities_info[activity]['start_ind_bitalino'] + activities_info[activity]['length']]
+            mag_data_4activity = mag_data['MAG'][activities_info[activity]['start_ind_scientisst'] : activities_info[activity]['start_ind_scientisst'] + activities_info[activity]['length']]
+            airflow_data_4activity = airflow_data['Airflow'][activities_info[activity]['start_ind_biopac'] : activities_info[activity]['start_ind_biopac'] + activities_info[activity]['length']]
+            pzt_data_4activity = pzt_data['PZT'][activities_info[activity]['start_ind_bitalino'] : activities_info[activity]['start_ind_bitalino'] + activities_info[activity]['length']]
 
-            scientisst_data_processed, _, bitalino_data_processed, biopac_data_processed = preprocess(a, b, c)
+            mag_data_processed, airflow_data_processed, pzt_data_processed = preprocess(mag_data_4activity, airflow_data_4activity, pzt_data_4activity)
 
-            data[id][activity]['scientisst'] = scientisst_data_processed
-            data[id][activity]['biopac'] = biopac_data_processed
-            data[id][activity]['bitalino'] = bitalino_data_processed
+            data[id][activity]['mag'] = mag_data_processed
+            data[id][activity]['airflow'] = airflow_data_processed
+            data[id][activity]['pzt'] = pzt_data_processed
 
-            data_raw[id][activity]['scientisst'] = a.values
-            data_raw[id][activity]['biopac'] = b.values
-            data_raw[id][activity]['bitalino'] = c.values
+            data_raw[id][activity]['mag'] = mag_data_4activity.values
+            data_raw[id][activity]['airflow'] = airflow_data_4activity.values
+            data_raw[id][activity]['pzt'] = pzt_data_4activity.values
 
 
     if save:
@@ -106,8 +109,8 @@ def get_delays(overview):
     ---------- 
     overview: pd.DataFrame
         Dataframe with the overview of the results for a specific participant, activity and device
-    overview_BIOPAC: pd.DataFrame
-        Dataframe with the overview of the results for a specific participant and activity for the BIOPAC device
+    overview_Airflow: pd.DataFrame
+        Dataframe with the overview of the results for a specific participant and activity for the Airflow device
         
     Returns
     -------
@@ -144,50 +147,50 @@ def transform_overview_on_target(overview, target, sampling_frequency=100):
                 key = activity
 
             # get mean duration of respiratory cycle (tB) for each participant and activity (to compute adjusted delay)
-            mean_tB = overview[id][activity]["BIOPAC"]["tB (s)"].mean()
+            mean_tB = overview[id][activity]["Airflow"]["tB (s)"].mean()
 
             if key not in overview_transformed.keys():
-                overview_transformed[key] = {"ScientISST": {}, "BIOPAC": {}, "BITalino": {}}
+                overview_transformed[key] = {"MAG": {}, "Airflow": {}, "PZT": {}}
 
             for metric in ["TP_i", "TP_e", "FP_i", "FP_e", "FN_i", "FN_e"]:
-                overview_transformed[key]["ScientISST"][metric] = overview_transformed[key]["ScientISST"].get(metric, []) + overview[id][activity]["ScientISST"][metric]
-                overview_transformed[key]["BITalino"][metric] = overview_transformed[key]["BITalino"].get(metric, []) + overview[id][activity]["BITalino"][metric]
+                overview_transformed[key]["MAG"][metric] = overview_transformed[key]["MAG"].get(metric, []) + overview[id][activity]["MAG"][metric]
+                overview_transformed[key]["PZT"][metric] = overview_transformed[key]["PZT"].get(metric, []) + overview[id][activity]["PZT"][metric]
             
             for metric in ["delay_i", "delay_e"]:
-                delays_scientisst = (pd.Series(overview[id][activity]["ScientISST"][metric]) * (-1/sampling_frequency)).tolist()
-                delays_bitalino = (pd.Series(overview[id][activity]["BITalino"][metric]) * (-1/sampling_frequency)).tolist()
+                delays_mag = (pd.Series(overview[id][activity]["MAG"][metric]) * (-1/sampling_frequency)).tolist()
+                delays_pzt = (pd.Series(overview[id][activity]["PZT"][metric]) * (-1/sampling_frequency)).tolist()
 
                 
                 
-                overview_transformed[key]["ScientISST"][metric] = overview_transformed[key]["ScientISST"].get(metric, []) + delays_scientisst
-                overview_transformed[key]["BITalino"][metric] = overview_transformed[key]["BITalino"].get(metric, []) + delays_bitalino
-                overview_transformed[key]["ScientISST"][f"adjusted_{metric}"] = overview_transformed[key]["ScientISST"].get(f"adjusted_{metric}", []) + [d / mean_tB for d in delays_scientisst]
-                overview_transformed[key]["BITalino"][f"adjusted_{metric}"] = overview_transformed[key]["BITalino"].get(f"adjusted_{metric}", []) + [d / mean_tB for d in delays_bitalino]
+                overview_transformed[key]["MAG"][metric] = overview_transformed[key]["MAG"].get(metric, []) + delays_mag
+                overview_transformed[key]["PZT"][metric] = overview_transformed[key]["PZT"].get(metric, []) + delays_pzt
+                overview_transformed[key]["MAG"][f"adjusted_{metric}"] = overview_transformed[key]["MAG"].get(f"adjusted_{metric}", []) + [d / mean_tB for d in delays_mag]
+                overview_transformed[key]["PZT"][f"adjusted_{metric}"] = overview_transformed[key]["PZT"].get(f"adjusted_{metric}", []) + [d / mean_tB for d in delays_pzt]
 
     return overview_transformed
 
 
 def transform_overview_on_overall(overview, sampling_frequency=100):
 
-    overview_transformed = {"ScientISST": {}, "BIOPAC": {}, "BITalino": {}}
+    overview_transformed = {"MAG": {}, "Airflow": {}, "PZT": {}}
 
     for id in overview.keys():
         for activity in overview[id].keys():
 
             # get mean duration of respiratory cycle (tB) for each participant and activity (to compute adjusted delay)
-            mean_tB = overview[id][activity]["BIOPAC"]["tB (s)"].mean()
+            mean_tB = overview[id][activity]["Airflow"]["tB (s)"].mean()
 
             for metric in ["TP_i", "TP_e", "FP_i", "FP_e", "FN_i", "FN_e"]:
-                overview_transformed["ScientISST"][metric] = overview_transformed["ScientISST"].get(metric, []) + overview[id][activity]["ScientISST"][metric]
-                overview_transformed["BITalino"][metric] = overview_transformed["BITalino"].get(metric, []) + overview[id][activity]["BITalino"][metric]
+                overview_transformed["MAG"][metric] = overview_transformed["MAG"].get(metric, []) + overview[id][activity]["MAG"][metric]
+                overview_transformed["PZT"][metric] = overview_transformed["PZT"].get(metric, []) + overview[id][activity]["PZT"][metric]
 
             for metric in ["delay_i", "delay_e"]:
-                delays_scientisst = (pd.Series(overview[id][activity]["ScientISST"][metric]) * (-1/sampling_frequency)).tolist()
-                delays_bitalino = (pd.Series(overview[id][activity]["BITalino"][metric]) * (-1/sampling_frequency)).tolist()
+                delays_mag = (pd.Series(overview[id][activity]["MAG"][metric]) * (-1/sampling_frequency)).tolist()
+                delays_pzt = (pd.Series(overview[id][activity]["PZT"][metric]) * (-1/sampling_frequency)).tolist()
                 
-                overview_transformed["ScientISST"][metric] = overview_transformed["ScientISST"].get(metric, []) + delays_scientisst
-                overview_transformed["BITalino"][metric] = overview_transformed["BITalino"].get(metric, []) + delays_bitalino
-                overview_transformed["ScientISST"][f"adjusted_{metric}"] = overview_transformed["ScientISST"].get(f"adjusted_{metric}", []) + [d / mean_tB for d in delays_scientisst]
-                overview_transformed["BITalino"][f"adjusted_{metric}"] = overview_transformed["BITalino"].get(f"adjusted_{metric}", []) + [d / mean_tB for d in delays_bitalino]
+                overview_transformed["MAG"][metric] = overview_transformed["MAG"].get(metric, []) + delays_mag
+                overview_transformed["PZT"][metric] = overview_transformed["PZT"].get(metric, []) + delays_pzt
+                overview_transformed["MAG"][f"adjusted_{metric}"] = overview_transformed["MAG"].get(f"adjusted_{metric}", []) + [d / mean_tB for d in delays_mag]
+                overview_transformed["PZT"][f"adjusted_{metric}"] = overview_transformed["PZT"].get(f"adjusted_{metric}", []) + [d / mean_tB for d in delays_pzt]
 
     return overview_transformed

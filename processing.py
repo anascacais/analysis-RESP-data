@@ -8,25 +8,26 @@ def peak_valley(signal):
     return np.asarray(peak), np.asarray(valley)
 
 
-def preprocess(a, b, c):
+def preprocess(mag_data, airflow_data, pzt_data):
 
     # de-mean
-    a = a-a.mean()
-    b = b-b.mean()
-    c = c-c.mean()
+    mag_data = mag_data - mag_data.mean()
+    airflow_data = airflow_data - airflow_data.mean()
+    pzt_data = pzt_data - pzt_data.mean()
 
-    a = -a
+    # invert MAG data
+    mag_data = -mag_data
 
     #filter
-    a = savgol_filter(a, 100, 2)
-    c = savgol_filter(c, 100, 2)
+    mag_data = savgol_filter(mag_data, 100, 2)
+    pzt_data = savgol_filter(pzt_data, 100, 2)
     
     #integral
-    X = np.asarray(b - np.mean(b))
+    X = np.asarray(airflow_data - np.mean(airflow_data))
     dt = 1/100
-    integral = np.cumsum(X) * dt
+    airflow_data = np.cumsum(X) * dt
 
-    return a, b, c, integral
+    return mag_data, airflow_data, pzt_data
 
 def remove_extrems(peaks_biopac, valley_biopac, extrems, signal): 
     '''
