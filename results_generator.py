@@ -9,38 +9,32 @@ from plotly import graph_objs as go
 # local
 from files import save_results
 from processing import flow_reversal, time_compute, evaluate_extremums, compute_snr
+from constants import ACTIVITIES_LIST
 
 def write_results(id, data_4id, data_raw_4id, acquisition_folderpath, show_fig=False):
     
     participant_results = {}
 
-    with open(os.path.join(acquisition_folderpath, id, f'idx_{id}.json'), "r") as jsonFile:
-        activities_info = json.load(jsonFile)
+    # with open(os.path.join(acquisition_folderpath, id, f'idx_{id}.json'), "r") as jsonFile:
+    #     activities_info = json.load(jsonFile)
     
-    for activity in activities_info.keys():
+    for activity in ACTIVITIES_LIST:
 
         if show_fig:
             fig = go.Figure()
 
-        mag_data = data_4id[activity]['mag']
-        airflow_data = data_4id[activity]['airflow']
-        pzt_data = data_4id[activity]['pzt']
-
-        airflow_data_raw = data_raw_4id[activity]['airflow']
+        try:
+            mag_data = data_4id[activity]['mag']
+            airflow_data = data_4id[activity]['airflow']
+            pzt_data = data_4id[activity]['pzt']
+            airflow_data_raw = data_raw_4id[activity]['airflow']
+            
+        except KeyError as e:
+            print(f"    Could not find key {e}")
+            pass
 
         N = len(airflow_data_raw)
         time_x = np.linspace(0, N, N)
-
-        # a = scientisst_data['RESP'][activities_info[activity]['start_ind_scientisst'] : activities_info[activity]['start_ind_scientisst'] + activities_info[activity]['length']]
-        # b = biopac_data['airflow'][activities_info[activity]['start_ind_biopac'] : activities_info[activity]['start_ind_biopac'] + activities_info[activity]['length']]
-        # c = bitalino_data['PZT'][activities_info[activity]['start_ind_bitalino'] : activities_info[activity]['start_ind_bitalino'] + activities_info[activity]['length']]
-
-        # N = len(b)
-        # time_x = np.linspace(0, N, N)
-
-        # a, b, c, integral = preprocess(a, b, c)
-
-
 
         # plot
         if show_fig:
@@ -59,18 +53,16 @@ def write_results(id, data_4id, data_raw_4id, acquisition_folderpath, show_fig=F
         # evaluate peaks and valleys from MAG
         FP_s_e, TP_s_e, FN_s_e, performance_clf_s_e, positives_s_e, delay_s_e = evaluate_extremums(peaks_mag, peaks_airflow, tb_airflow, interval_airflow)
         FP_s_i, TP_s_i, FN_s_i, performance_clf_s_i, _, delay_s_i = evaluate_extremums(valleys_mag, valleys_airflow, tb_airflow, interval_airflow)
+
         # evaluate peaks and valleys from BITalino
         FP_c_e, TP_c_e, FN_c_e, _, _, delay_c_e = evaluate_extremums(peaks_pzt, peaks_airflow, tb_airflow, interval_airflow)
         FP_c_i, TP_c_i, FN_c_i, _, _, delay_c_i = evaluate_extremums(valleys_pzt, valleys_airflow, tb_airflow, interval_airflow)
 
-
         tb_mag, ti_mag , te_mag, _, ds_mag = time_compute(peaks_mag, valleys_mag)
         tb_pzt, ti_pzt , te_pzt, _, ds_pzt = time_compute(peaks_pzt, valleys_pzt)
 
-
-        #print('Scientisst: tb', tb_a, 'ti' ,ti_a ,'te', te_a)
-        br_mag = (60*len(tb_mag))/np.sum(tb_mag)
-        br_pzt = (60*len(tb_pzt))/np.sum(tb_pzt)
+        br_mag = (60*len(tb_mag)) / np.sum(tb_mag)
+        br_pzt = (60*len(tb_pzt)) / np.sum(tb_pzt)
         brv_mag = (np.std(tb_mag) / np.mean(tb_mag)) * 100
         brv_airflow = (np.std(tb_airflow) / np.mean(tb_airflow)) * 100
         brv_pzt = (np.std(tb_pzt) / np.mean(tb_pzt)) * 100

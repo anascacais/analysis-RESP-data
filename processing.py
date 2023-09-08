@@ -1,11 +1,39 @@
 # third-party
 import numpy as np
-from scipy.signal import find_peaks, peak_prominences, savgol_filter
+from scipy.signal import find_peaks, peak_prominences, savgol_filter, detrend
 
 def peak_valley(signal):
     peak, _ = find_peaks(signal, distance=100)#, height= np.ptp(integral) * 0.1)
     valley, _ = find_peaks(-signal, distance=100)#, height= np.ptp(integral) * 0.1)
     return np.asarray(peak), np.asarray(valley)
+
+
+def detrend_signal(signal, sampling_rate=100, segment_length=10):
+    # Calculate the number of samples in each 10-second segment
+    segment_samples = int(sampling_rate * segment_length)
+
+    # Calculate the number of segments
+    num_segments = len(signal) // segment_samples
+
+    # Detrend each segment separately
+    detrended_signal = []
+    for i in range(num_segments):
+        start_idx = i * segment_samples
+        end_idx = (i + 1) * segment_samples
+        segment = signal[start_idx:end_idx]
+        detrended_segment = detrend(segment)
+        detrended_signal.extend(detrended_segment)
+
+    if len(signal) % segment_samples != 0:
+        start_idx = (i + 1) * segment_samples
+        segment = signal[start_idx:]
+        detrended_segment = detrend(segment)
+        detrended_signal.extend(detrended_segment)
+
+    # Convert the result back to a NumPy array
+    detrended_signal = np.array(detrended_signal)
+
+    return detrended_signal
 
 
 def preprocess(mag_data, airflow_data, pzt_data):
@@ -27,7 +55,13 @@ def preprocess(mag_data, airflow_data, pzt_data):
     dt = 1/100
     airflow_data = np.cumsum(X) * dt
 
+    pzt_data = detrend_signal(pzt_data)
+    Y = np.asarray(pzt_data - np.mean(pzt_data))
+    pzt_data = np.cumsum(Y) * dt
+
     return mag_data, airflow_data, pzt_data
+
+
 
 def remove_extrems(peaks_biopac, valley_biopac, extrems, signal): 
     '''

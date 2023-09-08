@@ -7,3 +7,5 @@ DEVICE_INFO = {
     "mag": {"sensor": "MAG", "name": "MAG"}, 
     "pzt": {"sensor": "PZT", "name": "PZT"}
 }
+
+ACTIVITIES_LIST = ['SNB', 'SGB', 'MCH', 'SQT', 'MIXB', 'STNB', 'AAL', 'AAR', 'ALL', 'ALR', 'UAL', 'UAR', 'SE', 'SS', 'TR']
