@@ -108,7 +108,7 @@ def plot_inspiration_vs_expiration(delays_df, categorical_palette=None):
                             side='positive',
                             line_color=next(categorical_palette))
                 )
-    fig.update_traces(meanline_visible=True)
+    fig.update_traces(meanline_visible=True, width=1.2)
     fig.update_layout(
         title=f'Delay distribution for each sensor (inspiration vs expiration)', 
         xaxis = {
