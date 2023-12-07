@@ -129,20 +129,25 @@ def flow_reversal(signal):
     return peak, valley
 
 
-def time_compute(peak, valley, positives_peak_ref=None, positives_valley_ref=None):
+def time_compute(peak, valley, positives_peak_ref=0, positives_valley_ref=0):
     '''
     input: indices peak(exp) and valleys(insp)
     output: breathing period (secs); considering a cycle inspiration+expiration; Rejecting isolated expirations at the begining and inspirations at the end
     time from valley to valley == from inspiration to inspiration
 
     '''
+    if (len(peak) == 0 or len(valley) == 0) and positives_peak_ref == 0:
+        return np.array([]), np.array([]), np.array([]), [], []
+    elif (len(peak) == 0 or len(valley) == 0) and positives_peak_ref != 0:
+        return np.array([]), np.array([]), np.array([]), [], [], np.array([]), np.array([]), np.array([]), []
+
     sampling_freq = 100
     extrems = np.concatenate((peak, valley))
     extrems = np.sort(extrems)
     dif = np.diff(extrems)
     interval = []
 
-    if positives_peak_ref:
+    if positives_peak_ref != 0:
         peak_ref = np.array(list(positives_peak_ref.keys()))
         valley_ref = np.array(list(positives_valley_ref.keys()))
         extrems_ref = np.sort(np.concatenate((peak_ref, valley_ref)))
@@ -157,13 +162,13 @@ def time_compute(peak, valley, positives_peak_ref=None, positives_valley_ref=Non
         time_insp = dif[1::2]
         time_exp = dif[2::2]
 
-        if positives_peak_ref:
+        if positives_peak_ref != 0:
             time_insp_ref = dif_ref[1::2]
             time_exp_ref = dif_ref[2::2]
 
         for c in range(len(time_insp)):
             try:
-                if positives_peak_ref:
+                if positives_peak_ref != 0:
                     breath_time_ref.append(
                         time_insp_ref[c] + time_exp_ref[c])
                     ds_ref.append(
@@ -175,21 +180,28 @@ def time_compute(peak, valley, positives_peak_ref=None, positives_valley_ref=Non
 
             except:
                 pass
-        time_exp = np.concatenate((dif[0], time_exp), axis=None)
-        if positives_peak_ref:
-            time_exp_ref = np.concatenate(
-                (dif_ref[0], time_exp_ref), axis=None)
+        try:  # catches when there are no complete breaths
+            time_exp = np.concatenate((dif[0], time_exp), axis=None)
+
+            if positives_peak_ref != 0:
+                time_exp_ref = np.concatenate(
+                    (dif_ref[0], time_exp_ref), axis=None)
+
+        except Exception as e:
+            print(e)
+            pass
 
     else:
         # dif=insp-exp=valley-peak
         time_insp = dif[0::2]
         time_exp = dif[1::2]
-        if positives_peak_ref:
+        if positives_peak_ref != 0:
             time_insp_ref = dif_ref[0::2]
             time_exp_ref = dif_ref[1::2]
+
         for c in range(len(time_insp)):
             try:
-                if positives_peak_ref:
+                if positives_peak_ref != 0:
                     breath_time_ref.append(time_insp_ref[c]+time_exp_ref[c])
                     ds_ref.append(
                         (time_insp_ref[c] * 100) / (time_insp_ref[c] + time_exp_ref[c]))
@@ -205,7 +217,7 @@ def time_compute(peak, valley, positives_peak_ref=None, positives_valley_ref=Non
     tI = time_insp/sampling_freq
     tE = time_exp/sampling_freq
 
-    if positives_peak_ref:
+    if positives_peak_ref != 0:
         tB_ref = np.asarray(breath_time_ref)/sampling_freq
         tI_ref = time_insp_ref/sampling_freq
         tE_ref = time_exp_ref/sampling_freq
@@ -226,11 +238,11 @@ def thresDistance_peaks(point_ref, breaths, interval):
     output: threshold distance considering the mean of 5 breaths (or less)
     '''
     if len(breaths) < 5:
-        return (np.mean(breaths)/2)*100
+        return (np.mean(breaths)*0.1)*100
 
     result = np.ones(len(breaths))
     for i in range(4, len(breaths)):
-        result[i] = (np.mean(breaths[i-4:i])/2)*100
+        result[i] = (np.mean(breaths[i-4:i])*0.1)*100
 
     for i in range(5):
         result[i] = result[4]

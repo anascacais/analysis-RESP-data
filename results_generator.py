@@ -76,11 +76,18 @@ def write_results(id, data_4id, data_raw_4id, acquisition_folderpath, show_fig=F
             np.array(TP_c_e), np.array(TP_c_i), positives_c_e, positives_c_i)
 
         # print('Scientisst: tb', tb_a, 'ti' ,ti_a ,'te', te_a)
-        br_mag = (60*len(tb_mag))/np.sum(tb_mag)
-        br_pzt = (60*len(tb_pzt))/np.sum(tb_pzt)
-        brv_mag = (np.std(tb_mag) / np.mean(tb_mag)) * 100
+        if len(tb_mag) != 0:
+            br_mag = (60*len(tb_mag))/np.sum(tb_mag)
+            brv_mag = (np.std(tb_mag) / np.mean(tb_mag)) * 100
+        else:
+            br_mag, brv_mag = None, None
+        if len(tb_pzt) != 0:
+            br_pzt = (60*len(tb_pzt))/np.sum(tb_pzt)
+            brv_pzt = (np.std(tb_pzt) / np.mean(tb_pzt)) * 100
+        else:
+            br_pzt, brv_pzt = None, None
+
         brv_airflow = (np.std(tb_airflow) / np.mean(tb_airflow)) * 100
-        brv_pzt = (np.std(tb_pzt) / np.mean(tb_pzt)) * 100
 
         if show_fig:
             for i in peaks_mag:
