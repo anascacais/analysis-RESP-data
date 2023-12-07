@@ -2,7 +2,7 @@
 import json
 import os
 
-# third-party 
+# third-party
 import numpy as np
 from plotly import graph_objs as go
 
@@ -10,13 +10,14 @@ from plotly import graph_objs as go
 from files import save_results
 from processing import flow_reversal, time_compute, evaluate_extremums, compute_snr
 
+
 def write_results(id, data_4id, data_raw_4id, acquisition_folderpath, show_fig=False):
-    
+
     participant_results = {}
 
     with open(os.path.join(acquisition_folderpath, id, f'idx_{id}.json'), "r") as jsonFile:
         activities_info = json.load(jsonFile)
-    
+
     for activity in activities_info.keys():
 
         if show_fig:
@@ -40,35 +41,41 @@ def write_results(id, data_4id, data_raw_4id, acquisition_folderpath, show_fig=F
 
         # a, b, c, integral = preprocess(a, b, c)
 
-
-
         # plot
         if show_fig:
-            fig.add_trace(go.Scatter(y = mag_data * 10, mode = 'lines', name='MAG'))
-            fig.add_trace(go.Scatter(y = airflow_data, mode = 'lines', name='Airflow')) 
-            fig.add_trace(go.Scatter(y = airflow_data_raw, mode = 'lines', name='Airflow (raw)')) 
-            fig.add_trace(go.Scatter(y = pzt_data, mode = 'lines', name='PZT'))
+            fig.add_trace(go.Scatter(y=mag_data * 10,
+                          mode='lines', name='MAG'))
+            fig.add_trace(go.Scatter(y=airflow_data,
+                          mode='lines', name='Airflow'))
+            fig.add_trace(go.Scatter(y=airflow_data_raw,
+                          mode='lines', name='Airflow (raw)'))
+            fig.add_trace(go.Scatter(y=pzt_data, mode='lines', name='PZT'))
 
         peaks_mag, valleys_mag = flow_reversal(mag_data)
         peaks_airflow, valleys_airflow = flow_reversal(airflow_data)
         peaks_pzt, valleys_pzt = flow_reversal(pzt_data)
 
-        tb_airflow, ti_airflow , te_airflow, interval_airflow, ds_airflow = time_compute(peaks_airflow, valleys_airflow)
+        tb_airflow, ti_airflow, te_airflow, interval_airflow, ds_airflow = time_compute(
+            peaks_airflow, valleys_airflow)
         br_airflow = (60 * len(tb_airflow)) / np.sum(tb_airflow)
 
         # evaluate peaks and valleys from MAG
-        FP_s_e, TP_s_e, FN_s_e, performance_clf_s_e, positives_s_e, delay_s_e = evaluate_extremums(peaks_mag, peaks_airflow, tb_airflow, interval_airflow)
-        FP_s_i, TP_s_i, FN_s_i, performance_clf_s_i, _, delay_s_i = evaluate_extremums(valleys_mag, valleys_airflow, tb_airflow, interval_airflow)
+        FP_s_e, TP_s_e, FN_s_e, performance_clf_s_e, positives_s_e, delay_s_e = evaluate_extremums(
+            peaks_mag, peaks_airflow, tb_airflow, interval_airflow)
+        FP_s_i, TP_s_i, FN_s_i, performance_clf_s_i, positives_s_i, delay_s_i = evaluate_extremums(
+            valleys_mag, valleys_airflow, tb_airflow, interval_airflow)
         # evaluate peaks and valleys from BITalino
-        FP_c_e, TP_c_e, FN_c_e, _, _, delay_c_e = evaluate_extremums(peaks_pzt, peaks_airflow, tb_airflow, interval_airflow)
-        FP_c_i, TP_c_i, FN_c_i, _, _, delay_c_i = evaluate_extremums(valleys_pzt, valleys_airflow, tb_airflow, interval_airflow)
+        FP_c_e, TP_c_e, FN_c_e, _, positives_c_e, delay_c_e = evaluate_extremums(
+            peaks_pzt, peaks_airflow, tb_airflow, interval_airflow)
+        FP_c_i, TP_c_i, FN_c_i, _, positives_c_i, delay_c_i = evaluate_extremums(
+            valleys_pzt, valleys_airflow, tb_airflow, interval_airflow)
 
+        tb_mag, ti_mag, te_mag, _, ds_mag, tb_mag_airflow, ti_mag_airflow, te_mag_airflow, ds_mag_airflow = time_compute(
+            np.array(TP_s_e), np.array(TP_s_i), positives_s_e, positives_s_i)
+        tb_pzt, ti_pzt, te_pzt, _, ds_pzt, tb_pzt_airflow, ti_pzt_airflow, te_pzt_airflow, ds_pzt_airflow = time_compute(
+            np.array(TP_c_e), np.array(TP_c_i), positives_c_e, positives_c_i)
 
-        tb_mag, ti_mag , te_mag, _, ds_mag = time_compute(peaks_mag, valleys_mag)
-        tb_pzt, ti_pzt , te_pzt, _, ds_pzt = time_compute(peaks_pzt, valleys_pzt)
-
-
-        #print('Scientisst: tb', tb_a, 'ti' ,ti_a ,'te', te_a)
+        # print('Scientisst: tb', tb_a, 'ti' ,ti_a ,'te', te_a)
         br_mag = (60*len(tb_mag))/np.sum(tb_mag)
         br_pzt = (60*len(tb_pzt))/np.sum(tb_pzt)
         brv_mag = (np.std(tb_mag) / np.mean(tb_mag)) * 100
@@ -76,34 +83,34 @@ def write_results(id, data_4id, data_raw_4id, acquisition_folderpath, show_fig=F
         brv_pzt = (np.std(tb_pzt) / np.mean(tb_pzt)) * 100
 
         if show_fig:
-            for i in peaks_mag: 
+            for i in peaks_mag:
                 name = performance_clf_s_e[i]['clf']
-                fig.add_vline(x=time_x[i], line_width=1, line_dash="dash", line_color="blue", name="", annotation_text=name)
+                fig.add_vline(x=time_x[i], line_width=1, line_dash="dash",
+                              line_color="blue", name="", annotation_text=name)
 
-
-            for i in valleys_mag: 
+            for i in valleys_mag:
                 name = performance_clf_s_i[i]['clf']
-                fig.add_vline(x=time_x[i], line_width=1, line_dash="dash", line_color="green", name="", annotation_text=name)
+                fig.add_vline(x=time_x[i], line_width=1, line_dash="dash",
+                              line_color="green", name="", annotation_text=name)
 
-
-            for j in peaks_airflow: 
+            for j in peaks_airflow:
                 if j not in positives_s_e.keys():
                     name = 'FN'
-                else: 
+                else:
                     name = ''
-                fig.add_vline(x=time_x[j], line_width=1, line_dash="dash", line_color="black", name="", annotation_text=name)
+                fig.add_vline(x=time_x[j], line_width=1, line_dash="dash",
+                              line_color="black", name="", annotation_text=name)
 
-        
-        #flow_reversal
-        #ratio_bitalino = (len(ti_c)+len(te_c))/(len(ti_airflow)+len(te_airflow))
-        #print((len(ti_mag)+len(te_mag))/(len(ti_airflow)+len(te_airflow)))
+        # flow_reversal
+        # ratio_bitalino = (len(ti_c)+len(te_c))/(len(ti_airflow)+len(te_airflow))
+        # print((len(ti_mag)+len(te_mag))/(len(ti_airflow)+len(te_airflow)))
         if show_fig:
-            fig.update_layout(title_text = activity)
-            fig.show() 
+            fig.update_layout(title_text=activity)
+            fig.show()
 
-        #save results:
+        # save results:
         participant_results_activity = {
-            'MAG':{
+            'MAG': {
                 'peaks': peaks_mag.tolist(),
                 'valleys': valleys_mag.tolist(),
                 'amplitude peaks': np.array(mag_data)[peaks_mag],
@@ -117,19 +124,23 @@ def write_results(id, data_4id, data_raw_4id, acquisition_folderpath, show_fig=F
                 'FN_e': FN_s_e,
                 'tI (s)': ti_mag,
                 'tE (s)': te_mag,
-                'tB (s)': tb_mag, 
+                'tB (s)': tb_mag,
+                'tI airflow (s)': ti_mag_airflow,
+                'tE airflow (s)': te_mag_airflow,
+                'tB airflow (s)': tb_mag_airflow,
                 'delay_i': delay_s_i,
                 'delay_e': delay_s_e,
                 'ratio': (len(peaks_mag) + len(valleys_mag)) / (len(peaks_airflow) + len(valleys_airflow)),
                 'ds (%)': ds_mag,
+                'ds airflow (%)': ds_mag_airflow,
                 'BR (bpm)': br_mag,
-                'BRV (%)' : brv_mag,
+                'BRV (%)': brv_mag
             },
-            'PZT':{
+            'PZT': {
                 'peaks': peaks_pzt.tolist(),
                 'valleys': valleys_pzt.tolist(),
-                'amplitude peaks':np.array(pzt_data)[peaks_pzt],
-                'amplitude valleys':np.array(pzt_data)[valleys_pzt],
+                'amplitude peaks': np.array(pzt_data)[peaks_pzt],
+                'amplitude valleys': np.array(pzt_data)[valleys_pzt],
                 'SNR': compute_snr(pzt_data),
                 'TP_i': TP_c_i,
                 'FP_i': FP_c_i,
@@ -141,27 +152,32 @@ def write_results(id, data_4id, data_raw_4id, acquisition_folderpath, show_fig=F
                 'delay_e': delay_c_e,
                 'tI (s)': ti_pzt,
                 'tE (s)': te_pzt,
-                'tB (s)': tb_pzt, 
+                'tB (s)': tb_pzt,
+                'tI airflow (s)': ti_pzt_airflow,
+                'tE airflow (s)': te_pzt_airflow,
+                'tB airflow (s)': tb_pzt_airflow,
                 'ratio': (len(peaks_pzt) + len(valleys_pzt)) / (len(peaks_airflow) + len(valleys_airflow)),
                 'BR (bpm)': br_pzt,
-                'BRV (%)' : brv_pzt,
+                'BRV (%)': brv_pzt,
                 'ds (%)': ds_pzt,
+                'ds airflow (%)': ds_pzt_airflow,
+                'TP_i_indx': positives_c_i,
+                'TP_e_indx': positives_c_e,
             },
-            'Airflow':{
+            'Airflow': {
                 'peaks': peaks_airflow.tolist(),
                 'valleys': valleys_airflow.tolist(),
-                'amplitude peaks':np.array(airflow_data_raw)[peaks_airflow],
-                'amplitude valleys':np.array(airflow_data_raw)[valleys_airflow],
+                'amplitude peaks': np.array(airflow_data_raw)[peaks_airflow],
+                'amplitude valleys': np.array(airflow_data_raw)[valleys_airflow],
                 'SNR': compute_snr(airflow_data_raw),
                 'tI (s)': ti_airflow.tolist(),
                 'tE (s)': te_airflow.tolist(),
-                'tB (s)': tb_airflow, 
-                'BRV (%)' : brv_airflow,
+                'tB (s)': tb_airflow.tolist(),
+                'BRV (%)': brv_airflow,
                 'ds (%)': ds_airflow,
                 'BR (bpm)': br_airflow,
             }
         }
-
 
         participant_results[activity] = participant_results_activity
 
