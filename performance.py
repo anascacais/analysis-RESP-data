@@ -2,9 +2,12 @@
 import pandas as pd
 import numpy as np
 import scipy.stats as stats
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
 
 # local
-from get_data import get_performance_metrics, get_delays, get_respiratory_parameters
+from get_data import get_performance_metrics, get_delays
+from constants import CATEGORICAL_PALETTE
 
 
 def get_fr_detection_performance(overview, target):
@@ -82,11 +85,11 @@ def get_breath_parameters_performance(overview, target):
                     overview[key][device]["tE (s)"], overview[key][device]["tE airflow (s)"]), compute_mae(overview[key][device]["tB (s)"], overview[key][device]["tB airflow (s)"])
                 new_entry["MRE Ti (%)"], new_entry["MRE Te (%)"], new_entry["MRE Tb (%)"] = compute_mre(overview[key][device]["tI (s)"], overview[key][device]["tI airflow (s)"]), compute_mre(
                     overview[key][device]["tE (s)"], overview[key][device]["tE airflow (s)"]), compute_mre(overview[key][device]["tB (s)"], overview[key][device]["tB airflow (s)"])
-                new_entry["R^2 Ti"], new_entry["SSE Ti"] = compute_r2_sse(
+                new_entry["R^2 Ti"], new_entry["SSE Ti"], _ = compute_r2_sse(
                     overview[key][device]["tI (s)"], overview[key][device]["tI airflow (s)"])
-                new_entry["R^2 Te"], new_entry["SSE Te"] = compute_r2_sse(
+                new_entry["R^2 Te"], new_entry["SSE Te"], _ = compute_r2_sse(
                     overview[key][device]["tE (s)"], overview[key][device]["tE airflow (s)"])
-                new_entry["R^2 Tb"], new_entry["SSE Tb"] = compute_r2_sse(
+                new_entry["R^2 Tb"], new_entry["SSE Tb"], _ = compute_r2_sse(
                     overview[key][device]["tB (s)"], overview[key][device]["tB airflow (s)"])
                 breath_parameters.loc[len(breath_parameters)] = new_entry
 
@@ -104,11 +107,11 @@ def get_breath_parameters_performance(overview, target):
                         overview[id][activity][device]["tE (s)"], overview[id][activity][device]["tE airflow (s)"]), compute_mae(overview[id][activity][device]["tB (s)"], overview[id][activity][device]["tB airflow (s)"])
                     new_entry["MRE Ti (%)"], new_entry["MRE Te (%)"], new_entry["MRE Tb (%)"] = compute_mre(overview[id][activity][device]["tI (s)"], overview[id][activity][device]["tI airflow (s)"]), compute_mre(
                         overview[id][activity][device]["tE (s)"], overview[id][activity][device]["tE airflow (s)"]), compute_mre(overview[id][activity][device]["tB (s)"], overview[id][activity][device]["tB airflow (s)"])
-                    new_entry["R^2 Ti"], new_entry["SSE Ti"] = compute_r2_sse(
+                    new_entry["R^2 Ti"], new_entry["SSE Ti"], _ = compute_r2_sse(
                         overview[id][activity][device]["tI (s)"], overview[id][activity][device]["tI airflow (s)"])
-                    new_entry["R^2 Te"], new_entry["SSE Te"] = compute_r2_sse(
+                    new_entry["R^2 Te"], new_entry["SSE Te"], _ = compute_r2_sse(
                         overview[id][activity][device]["tE (s)"], overview[id][activity][device]["tE airflow (s)"])
-                    new_entry["R^2 Tb"], new_entry["SSE Tb"] = compute_r2_sse(
+                    new_entry["R^2 Tb"], new_entry["SSE Tb"], _ = compute_r2_sse(
                         overview[id][activity][device]["tB (s)"], overview[id][activity][device]["tB airflow (s)"])
                     breath_parameters.loc[len(breath_parameters)] = new_entry
 
@@ -123,11 +126,11 @@ def get_breath_parameters_performance(overview, target):
                 overview[device]["tE (s)"], overview[device]["tE airflow (s)"]), compute_mae(overview[device]["tB (s)"], overview[device]["tB airflow (s)"])
             new_entry["MRE Ti (%)"], new_entry["MRE Te (%)"], new_entry["MRE Tb (%)"] = compute_mre(overview[device]["tI (s)"], overview[device]["tI airflow (s)"]), compute_mre(
                 overview[device]["tE (s)"], overview[device]["tE airflow (s)"]), compute_mre(overview[device]["tB (s)"], overview[device]["tB airflow (s)"])
-            new_entry["R^2 Ti"], new_entry["SSE Ti"] = compute_r2_sse(
+            new_entry["R^2 Ti"], new_entry["SSE Ti"], _ = compute_r2_sse(
                 overview[device]["tI (s)"], overview[device]["tI airflow (s)"])
-            new_entry["R^2 Te"], new_entry["SSE Te"] = compute_r2_sse(
+            new_entry["R^2 Te"], new_entry["SSE Te"], _ = compute_r2_sse(
                 overview[device]["tE (s)"], overview[device]["tE airflow (s)"])
-            new_entry["R^2 Tb"], new_entry["SSE Tb"] = compute_r2_sse(
+            new_entry["R^2 Tb"], new_entry["SSE Tb"], _ = compute_r2_sse(
                 overview[device]["tB (s)"], overview[device]["tB airflow (s)"])
             breath_parameters.loc[len(breath_parameters)] = new_entry
 
@@ -148,10 +151,93 @@ def compute_mre(test_param, target_param):
 
 def compute_r2_sse(test_param, target_param):
 
-    slope, intercept, r_value, _, _ = stats.linregress(
+    linreg = stats.linregress(
         np.array(target_param), np.array(test_param))
+
+    slope = linreg.slope
+    intercept = linreg.intercept
+    r_value = linreg.rvalue
+
     y_pred = slope * np.array(target_param) + intercept
     sse = np.sum((np.array(test_param) - y_pred)**2)
     r_squared = r_value**2
 
-    return np.around(r_squared, 2), np.around(sse, 2)
+    return np.around(r_squared, 2), np.around(sse, 2), linreg
+
+
+def bland_altman_plot(test_measures, target_measures, metric=None, sensor=None):
+
+    test_measures = np.array(test_measures)
+    target_measures = np.array(target_measures)
+
+    mean = np.mean([test_measures, target_measures], axis=0)
+    diff = test_measures - target_measures
+    md = np.mean(diff)  # Mean of the difference
+    sd = np.std(diff, axis=0)  # Standard deviation of the difference
+
+    fig = make_subplots(cols=2, subplot_titles=(
+        f"Airflow {metric} x {sensor} {metric}", f"Bland-Altman plot of {metric}"))
+
+    r_squared, _, linreg = compute_r2_sse(test_measures, target_measures)
+    fig.add_trace(go.Scatter(
+        x=target_measures,
+        y=linreg.intercept + linreg.slope*target_measures,
+        mode="lines",
+        line=dict(color="black", dash="dash", width=1),
+    ), row=1, col=1)
+
+    fig.add_trace(go.Scatter(
+        x=target_measures,
+        y=test_measures,
+        mode="markers",
+        marker_color=CATEGORICAL_PALETTE[0]
+    ), row=1, col=1)
+
+    fig.add_annotation(
+        text=f"R^2 = {r_squared}",
+        showarrow=False,
+        yanchor='bottom',
+        xanchor='right',
+        xshift=350,
+        yshift=500,
+        row=1, col=1)
+
+    # add mean line
+    fig.add_trace(go.Scatter(
+        x=[min(mean), max(mean)],
+        y=[md, md],
+        mode="lines",
+        line=dict(color="black", dash="dash", width=1)
+    ), row=1, col=2)
+
+    # add upper and lower limits of agreement
+    fig.add_trace(go.Scatter(
+        x=[min(mean), max(mean)],
+        y=[md + 1.96*sd, md + 1.96*sd],
+        mode="lines",
+        line=dict(color="black", dash="dash", width=1)
+    ), row=1, col=2)
+    fig.add_trace(go.Scatter(
+        x=[min(mean), max(mean)],
+        y=[md - 1.96*sd, md - 1.96*sd],
+        mode="lines",
+        line=dict(color="black", dash="dash", width=1)
+    ), row=1, col=2)
+
+    # Bland-Altman plot
+    fig.add_trace(go.Scatter(
+        x=mean,
+        y=diff,
+        mode="markers",
+        marker_color=CATEGORICAL_PALETTE[1]
+    ), row=1, col=2)
+
+    fig.update_xaxes(title_text=f"Airflow {metric} (s)", row=1, col=1)
+    fig.update_yaxes(title_text=f"{sensor} {metric} (s)", row=1, col=1)
+    fig.update_xaxes(
+        title_text=f"Mean of Airflow {metric} and {sensor} {metric} (s)", row=1, col=2)
+    fig.update_yaxes(
+        title_text=f"{sensor} {metric} - Airflow {metric} (s)", row=1, col=2)
+
+    fig.update(layout_showlegend=False, layout_height=800, layout_width=1200)
+    fig.show()
