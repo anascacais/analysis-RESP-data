@@ -117,40 +117,47 @@ def get_breath_parameters_performance(overview, target):
 
     else:
         breath_parameters = pd.DataFrame(columns=[
-            "Sensor", "MAE Ti (s)", "MRE Ti (%)", "MAE Te (s)", "MRE Te (%)", "MAE Tb (s)", "MRE Tb (%)"])
+            "Parameter", "Sensor", "Abs. error (s)", "Rel. error (%)"])
 
-        for device in ["MAG", "PZT"]:
-            new_entry = {}
-            new_entry["Sensor"] = device
-            new_entry["MAE Ti (s)"], new_entry["MAE Te (s)"], new_entry["MAE Tb (s)"] = compute_mae(overview[device]["tI (s)"], overview[device]["tI airflow (s)"]), compute_mae(
-                overview[device]["tE (s)"], overview[device]["tE airflow (s)"]), compute_mae(overview[device]["tB (s)"], overview[device]["tB airflow (s)"])
-            new_entry["MRE Ti (%)"], new_entry["MRE Te (%)"], new_entry["MRE Tb (%)"] = compute_mre(overview[device]["tI (s)"], overview[device]["tI airflow (s)"]), compute_mre(
-                overview[device]["tE (s)"], overview[device]["tE airflow (s)"]), compute_mre(overview[device]["tB (s)"], overview[device]["tB airflow (s)"])
-            # new_entry["R^2 Ti"], new_entry["SSE Ti"], _ = compute_r2_sse(
-            #     overview[device]["tI (s)"], overview[device]["tI airflow (s)"])
-            # new_entry["R^2 Te"], new_entry["SSE Te"], _ = compute_r2_sse(
-            #     overview[device]["tE (s)"], overview[device]["tE airflow (s)"])
-            # new_entry["R^2 Tb"], new_entry["SSE Tb"], _ = compute_r2_sse(
-            #     overview[device]["tB (s)"], overview[device]["tB airflow (s)"])
-            breath_parameters.loc[len(breath_parameters)] = new_entry
+        print(f'N={len(overview["MAG"]["tB (s)"])} breaths for MAG')
+        print(f'N={len(overview["PZT"]["tB (s)"])} breaths for PZT')
+
+        for parameter in ["tI", "tE", "tB"]:
+            for device in ["MAG", "PZT"]:
+                new_entry = {}
+                new_entry["Parameter"] = parameter
+                new_entry["Sensor"] = device
+                new_entry["Abs. error (s)"] = compute_mae(
+                    overview[device][f"{parameter} (s)"], overview[device][f"{parameter} airflow (s)"])
+                new_entry["Rel. error (%)"] = compute_mre(
+                    overview[device][f"{parameter} (s)"], overview[device][f"{parameter} airflow (s)"])
+                # new_entry["MAE Ti (s)"], new_entry["MAE Te (s)"], new_entry["MAE Tb (s)"] = compute_mae(overview[device]["tI (s)"], overview[device]["tI airflow (s)"]), compute_mae(
+                #     overview[device]["tE (s)"], overview[device]["tE airflow (s)"]), compute_mae(overview[device]["tB (s)"], overview[device]["tB airflow (s)"])
+                # new_entry["MRE Ti (%)"], new_entry["MRE Te (%)"], new_entry["MRE Tb (%)"] = compute_mre(overview[device]["tI (s)"], overview[device]["tI airflow (s)"]), compute_mre(
+                #     overview[device]["tE (s)"], overview[device]["tE airflow (s)"]), compute_mre(overview[device]["tB (s)"], overview[device]["tB airflow (s)"])
+
+                breath_parameters.loc[len(breath_parameters)] = new_entry
 
     return breath_parameters
 
 
 def compute_mae(test_param, target_param):
-
+    if len(test_param) == 0:
+        return "nan , nan"
     abs_error = np.abs(np.array(test_param) - np.array(target_param))
-    return f"{np.around(np.mean(abs_error), 2)} , {np.around(np.std(abs_error), 2)}"
+    return f"{np.mean(abs_error):.2f} , {np.std(abs_error):.2f}"
 
 
 def compute_mre(test_param, target_param):
-
+    if len(test_param) == 0:
+        return "nan , nan"
     abs_error = np.abs(np.array(test_param) - np.array(target_param))
-    return f"{np.around(np.mean(abs_error/np.array(target_param))*100, 2)} , {np.around(np.std(abs_error/np.array(target_param))*100, 2)}"
+    return f"{(np.mean(abs_error/np.array(target_param))*100):.2f} , {(np.std(abs_error/np.array(target_param))*100):.2f}"
 
 
 def compute_r2_sse(test_param, target_param):
-
+    if len(test_param) == 0:
+        return None, None, None
     linreg = stats.linregress(
         np.array(target_param), np.array(test_param))
 
@@ -251,3 +258,5 @@ def bland_altman_plot(test_measures, target_measures, metric=None, sensor=None):
 
     fig.update(layout_showlegend=False, layout_height=800, layout_width=1200)
     fig.show()
+
+    fig.write_image(f"Results/blandaltman_{metric}_{sensor}.pdf")

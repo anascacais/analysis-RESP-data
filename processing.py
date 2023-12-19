@@ -232,13 +232,12 @@ def time_compute(peak, valley, positives_peak_ref=0, positives_valley_ref=0):
 
 
 def thresDistance_peaks(point_ref, breaths, interval):
-    # TODO: change value of thr
     '''
     input: period of each breathing
     output: threshold distance considering the mean of 5 breaths (or less)
     '''
     if len(breaths) < 5:
-        return (np.mean(breaths)*0.1)*100
+        return (np.mean(breaths)*0.5)*100
 
     result = np.ones(len(breaths))
     for i in range(4, len(breaths)):
