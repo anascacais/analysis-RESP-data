@@ -52,9 +52,9 @@ def get_data_by_id_activity(acquisition_folderpath, save=False):
             data_raw[id][activity] = pd.DataFrame(
                 columns=['mag', 'airflow', 'pzt'])
 
-            mag_data_4activity = mag_data['MAG'][activities_info[activity]['start_ind_scientisst']                                                 : activities_info[activity]['start_ind_scientisst'] + activities_info[activity]['length']]
-            airflow_data_4activity = airflow_data['Airflow'][activities_info[activity]['start_ind_biopac']                                                             : activities_info[activity]['start_ind_biopac'] + activities_info[activity]['length']]
-            pzt_data_4activity = pzt_data['PZT'][activities_info[activity]['start_ind_bitalino']                                                 : activities_info[activity]['start_ind_bitalino'] + activities_info[activity]['length']]
+            mag_data_4activity = mag_data['MAG'][activities_info[activity]['start_ind_scientisst']: activities_info[activity]['start_ind_scientisst'] + activities_info[activity]['length']]
+            airflow_data_4activity = airflow_data['Airflow'][activities_info[activity]['start_ind_biopac']: activities_info[activity]['start_ind_biopac'] + activities_info[activity]['length']]
+            pzt_data_4activity = pzt_data['PZT'][activities_info[activity]['start_ind_bitalino']: activities_info[activity]['start_ind_bitalino'] + activities_info[activity]['length']]
 
             mag_data_processed, airflow_data_processed, pzt_data_processed = preprocess(
                 mag_data_4activity, airflow_data_4activity, pzt_data_4activity)
@@ -224,47 +224,53 @@ def transform_overview_on_target(overview, target, sampling_frequency=100):
     return overview_transformed
 
 
-def transform_overview_on_overall(overview, sampling_frequency=100):
+def transform_overview_on_overall(overview, sampling_frequency=100, ignore_key=None):
 
     overview_transformed = {"MAG": {}, "Airflow": {}, "PZT": {}}
 
     for id in overview.keys():
-        for activity in overview[id].keys():
 
-            # get mean duration of respiratory cycle (tB) for each participant and activity (to compute adjusted delay)
-            mean_tB = np.mean(overview[id][activity]["Airflow"]["tB (s)"])
+        if ignore_key is None or id != ignore_key:
 
-            for metric in ["TP_i", "TP_e", "FP_i", "FP_e", "FN_i", "FN_e"]:
-                overview_transformed["MAG"][metric] = overview_transformed["MAG"].get(
-                    metric, []) + overview[id][activity]["MAG"][metric]
-                overview_transformed["PZT"][metric] = overview_transformed["PZT"].get(
-                    metric, []) + overview[id][activity]["PZT"][metric]
+            for activity in overview[id].keys():
 
-            for metric in ["tI (s)", "tE (s)", "tB (s)"]:
-                overview_transformed["MAG"][metric] = overview_transformed["MAG"].get(
-                    metric, []) + overview[id][activity]["MAG"][metric].tolist()
-                overview_transformed["PZT"][metric] = overview_transformed["PZT"].get(
-                    metric, []) + overview[id][activity]["PZT"][metric].tolist()
+                if ignore_key is None or activity != ignore_key:
 
-            for metric in ["tI airflow (s)", "tE airflow (s)", "tB airflow (s)"]:
-                overview_transformed["MAG"][metric] = overview_transformed["MAG"].get(
-                    metric, []) + overview[id][activity]["MAG"][metric].tolist()
-                overview_transformed["PZT"][metric] = overview_transformed["PZT"].get(
-                    metric, []) + overview[id][activity]["PZT"][metric].tolist()
+                    # get mean duration of respiratory cycle (tB) for each participant and activity (to compute adjusted delay)
+                    mean_tB = np.mean(
+                        overview[id][activity]["Airflow"]["tB (s)"])
 
-            for metric in ["delay_i", "delay_e"]:
-                delays_mag = (pd.Series(
-                    overview[id][activity]["MAG"][metric]) * (-1/sampling_frequency)).tolist()
-                delays_pzt = (pd.Series(
-                    overview[id][activity]["PZT"][metric]) * (-1/sampling_frequency)).tolist()
+                    for metric in ["TP_i", "TP_e", "FP_i", "FP_e", "FN_i", "FN_e"]:
+                        overview_transformed["MAG"][metric] = overview_transformed["MAG"].get(
+                            metric, []) + overview[id][activity]["MAG"][metric]
+                        overview_transformed["PZT"][metric] = overview_transformed["PZT"].get(
+                            metric, []) + overview[id][activity]["PZT"][metric]
 
-                overview_transformed["MAG"][metric] = overview_transformed["MAG"].get(
-                    metric, []) + delays_mag
-                overview_transformed["PZT"][metric] = overview_transformed["PZT"].get(
-                    metric, []) + delays_pzt
-                overview_transformed["MAG"][f"adjusted_{metric}"] = overview_transformed["MAG"].get(
-                    f"adjusted_{metric}", []) + [d / mean_tB for d in delays_mag]
-                overview_transformed["PZT"][f"adjusted_{metric}"] = overview_transformed["PZT"].get(
-                    f"adjusted_{metric}", []) + [d / mean_tB for d in delays_pzt]
+                    for metric in ["tI (s)", "tE (s)", "tB (s)"]:
+                        overview_transformed["MAG"][metric] = overview_transformed["MAG"].get(
+                            metric, []) + overview[id][activity]["MAG"][metric].tolist()
+                        overview_transformed["PZT"][metric] = overview_transformed["PZT"].get(
+                            metric, []) + overview[id][activity]["PZT"][metric].tolist()
+
+                    for metric in ["tI airflow (s)", "tE airflow (s)", "tB airflow (s)"]:
+                        overview_transformed["MAG"][metric] = overview_transformed["MAG"].get(
+                            metric, []) + overview[id][activity]["MAG"][metric].tolist()
+                        overview_transformed["PZT"][metric] = overview_transformed["PZT"].get(
+                            metric, []) + overview[id][activity]["PZT"][metric].tolist()
+
+                    for metric in ["delay_i", "delay_e"]:
+                        delays_mag = (pd.Series(
+                            overview[id][activity]["MAG"][metric]) * (-1/sampling_frequency)).tolist()
+                        delays_pzt = (pd.Series(
+                            overview[id][activity]["PZT"][metric]) * (-1/sampling_frequency)).tolist()
+
+                        overview_transformed["MAG"][metric] = overview_transformed["MAG"].get(
+                            metric, []) + delays_mag
+                        overview_transformed["PZT"][metric] = overview_transformed["PZT"].get(
+                            metric, []) + delays_pzt
+                        overview_transformed["MAG"][f"adjusted_{metric}"] = overview_transformed["MAG"].get(
+                            f"adjusted_{metric}", []) + [d / mean_tB for d in delays_mag]
+                        overview_transformed["PZT"][f"adjusted_{metric}"] = overview_transformed["PZT"].get(
+                            f"adjusted_{metric}", []) + [d / mean_tB for d in delays_pzt]
 
     return overview_transformed

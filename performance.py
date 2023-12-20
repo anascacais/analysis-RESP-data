@@ -117,7 +117,7 @@ def get_breath_parameters_performance(overview, target):
 
     else:
         breath_parameters = pd.DataFrame(columns=[
-            "Parameter", "Sensor", "Abs. error (s)", "Rel. error (%)"])
+            "Parameter", "Sensor", "Abs. error (s)", "Rel. error (%)", "R^2", "Bias (s)", "Variability (s)"])
 
         print(f'N={len(overview["MAG"]["tB (s)"])} breaths for MAG')
         print(f'N={len(overview["PZT"]["tB (s)"])} breaths for PZT')
@@ -130,6 +130,10 @@ def get_breath_parameters_performance(overview, target):
                 new_entry["Abs. error (s)"] = compute_mae(
                     overview[device][f"{parameter} (s)"], overview[device][f"{parameter} airflow (s)"])
                 new_entry["Rel. error (%)"] = compute_mre(
+                    overview[device][f"{parameter} (s)"], overview[device][f"{parameter} airflow (s)"])
+                new_entry["R^2"], _, _ = compute_r2_sse(
+                    overview[device][f"{parameter} (s)"], overview[device][f"{parameter} airflow (s)"])
+                new_entry["Bias (s)"], new_entry["Variability (s)"] = bland_altman_analysis(
                     overview[device][f"{parameter} (s)"], overview[device][f"{parameter} airflow (s)"])
                 # new_entry["MAE Ti (s)"], new_entry["MAE Te (s)"], new_entry["MAE Tb (s)"] = compute_mae(overview[device]["tI (s)"], overview[device]["tI airflow (s)"]), compute_mae(
                 #     overview[device]["tE (s)"], overview[device]["tE airflow (s)"]), compute_mae(overview[device]["tB (s)"], overview[device]["tB airflow (s)"])
@@ -172,20 +176,134 @@ def compute_r2_sse(test_param, target_param):
     return np.around(r_squared, 2), np.around(sse, 2), linreg
 
 
-def bland_altman_plot(test_measures, target_measures, metric=None, sensor=None):
+def get_relative_errors(target_param, test_param):
+
+    abs_error = np.array(target_param) - np.array(test_param)
+    return abs_error / np.array(target_param)
+
+
+def bland_altman_analysis(test_measures, target_measures):
+
+    test_measures = np.array(test_measures)
+    target_measures = np.array(target_measures)
+
+    diff = test_measures - target_measures
+    bias = np.mean(diff)
+    variability = np.std(diff, ddof=1)
+
+    return f"{bias:.3f}", f"{variability:.3f}"
+
+
+def get_bias_variability(overview, target, metric, relative_error):
+
+    if relative_error:
+        unit = "%"
+    else:
+        unit = "s"
+
+    if target in ["ID", "Activity"]:
+        bias_variability = pd.DataFrame(columns=[
+            target, "Sensor", f"Bias ({unit})", f"Variability ({unit})"])
+        for key in overview.keys():
+            for device in ["MAG", "PZT"]:
+                new_entry = {}
+                new_entry[target] = key
+                new_entry["Sensor"] = device
+                new_entry[f"Bias ({unit})"], new_entry[f"Variability ({unit})"] = bland_altman_analysis(
+                    overview[key][device][f"{metric} (s)"], overview[key][device][f"{metric} airflow (s)"])
+
+                bias_variability.loc[len(bias_variability)] = new_entry
+
+    return bias_variability
+
+
+def bland_altman_plot(mag_test_measures, mag_target_measures, pzt_test_measures, pzt_target_measures, metric):
+
+    test_measures = [np.array(mag_test_measures),
+                     np.array(pzt_test_measures)]
+    target_measures = [np.array(mag_target_measures),
+                       np.array(pzt_target_measures)]
+
+    fig = make_subplots(cols=2,
+                        x_title=f"Mean of Airflow {metric} and sensor {metric} (s)",
+                        y_title=f"Sensor {metric} - Airflow {metric} (s)",
+                        subplot_titles=("MAG", "PZT"),
+                        shared_yaxes=True)
+
+    for i, sensor in enumerate(["MAG", "PZT"]):
+
+        mean = np.mean([test_measures[i], target_measures[i]], axis=0)
+        diff = test_measures[i] - target_measures[i]
+        md = np.mean(diff)
+        sd = np.std(diff, ddof=1)
+
+        fig.add_trace(go.Scatter(
+            x=[min(mean), max(mean)],
+            y=[md, md],
+            mode="lines",
+            line=dict(color=CATEGORICAL_PALETTE[1], width=2),
+            name="Mean"
+        ), row=1, col=i+1)
+
+        # add upper and lower limits of agreement
+        fig.add_trace(go.Scatter(
+            x=[min(mean), max(mean)],
+            y=[md + 1.96*sd, md + 1.96*sd],
+            mode="lines",
+            line=dict(color="black", dash="dash", width=2),
+            name="LoA"
+        ), row=1, col=i+1)
+        fig.add_trace(go.Scatter(
+            x=[min(mean), max(mean)],
+            y=[md - 1.96*sd, md - 1.96*sd],
+            mode="lines",
+            line=dict(color="black", dash="dash", width=2)
+        ), row=1, col=i+1)
+
+        # Bland-Altman plot
+        fig.add_trace(go.Scatter(
+            x=mean,
+            y=diff,
+            mode="markers",
+            marker_color=CATEGORICAL_PALETTE[0],
+        ), row=1, col=i+1)
+
+        # fig.update_xaxes(
+        #     title_text=f"Mean of Airflow {metric} and {sensor} {metric} (s)", row=1, col=i+1)
+        # fig.update_yaxes(
+        #     title_text=f"{sensor} {metric} - Airflow {metric} (s)", row=1, col=i+1)
+
+    for j, trace in enumerate(fig['data']):
+        if j in [0, 1]:
+            trace['showlegend'] = True
+        else:
+            trace['showlegend'] = False
+
+    fig.update(layout_height=600, layout_width=600)
+    fig.update_layout(yaxis_showticklabels=True,
+                      yaxis2_showticklabels=False, title=f"Blant-Altman plot of {metric}")
+
+    fig.show()
+
+    fig.write_image(f"Results/blandaltman_{metric}.pdf")
+
+
+def bland_altman_linreg_plot(test_measures, target_measures, metric=None, sensor=None):
 
     test_measures = np.array(test_measures)
     target_measures = np.array(target_measures)
 
     mean = np.mean([test_measures, target_measures], axis=0)
     diff = test_measures - target_measures
-    md = np.mean(diff)  # Mean of the difference
-    sd = np.std(diff, axis=0)  # Standard deviation of the difference
+    md = np.mean(diff)  # Mean of the difference -> bias
+    sd = np.std(diff, ddof=1)  # Standard deviation of the difference ->
 
     fig = make_subplots(cols=2, subplot_titles=(
         f"Linear regression of {sensor} {metric} by Airflow {metric}", f"Bland-Altman plot of {metric}"))
 
     r_squared, _, linreg = compute_r2_sse(test_measures, target_measures)
+    print(f"slope: {linreg.slope}, intercept: {linreg.intercept}")
+
     fig.add_trace(go.Scatter(
         x=target_measures,
         y=linreg.intercept + linreg.slope*target_measures,
@@ -256,7 +374,7 @@ def bland_altman_plot(test_measures, target_measures, metric=None, sensor=None):
     fig.update_yaxes(
         title_text=f"{sensor} {metric} - Airflow {metric} (s)", row=1, col=2)
 
-    fig.update(layout_showlegend=False, layout_height=800, layout_width=1200)
+    fig.update(layout_showlegend=False, layout_height=600, layout_width=600)
     fig.show()
 
     fig.write_image(f"Results/blandaltman_{metric}_{sensor}.pdf")
