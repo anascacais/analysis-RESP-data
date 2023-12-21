@@ -144,7 +144,7 @@ def get_delays(overview):
     adjusted_mean_delay = int(pd.Series(
         overview["adjusted_delay_i"] + overview["adjusted_delay_e"]).mean() * 100)
 
-    return [f"{delays.mean().round(2)} $\pm$ {delays.std().round(2)}", f"{adjusted_mean_delay} %"]
+    return [f"{delays.mean():.2f} $\pm$ {delays.std().round(2):.2f}", f"{adjusted_mean_delay} \%"]
 
 
 def get_respiratory_parameters(overview, overview_ref):
