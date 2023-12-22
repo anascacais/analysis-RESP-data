@@ -129,13 +129,100 @@ def flow_reversal(signal):
     return peak, valley
 
 
-def time_compute(peak, valley, positives_peak_ref=0, positives_valley_ref=0):
+def get_TP_times(extrema, extrema_ref_og, first_is_right, first_is_right_ref, jump):
+
+    extrema_ref = extrema_ref_og.copy()
+
+    for ind in np.where(np.array([a[1] for a in extrema]) == False)[0]:
+        extrema_ref.insert(ind, (0, 0))
+
+    if first_is_right:
+        extrema_pairs = np.array([[tup1[0], tup2[0], all((tup1[1], tup2[1]))] for tup1, tup2 in zip(
+            extrema[::jump], extrema[1::jump])])
+        extrema_pairs_ref = np.array([[tup1[1], tup2[1]] for tup1, tup2 in zip(
+            extrema_ref[::jump], extrema_ref[1::jump])])
+    else:
+        extrema_pairs = np.array([[tup1[0], tup2[0], all((tup1[1], tup2[1]))] for tup1, tup2 in zip(
+            extrema[1::2], extrema[2::2])])
+        extrema_pairs_ref = np.array([[tup1[1], tup2[1]] for tup1, tup2 in zip(
+            extrema_ref[1::2], extrema_ref[2::2])])
+
+    # extrema_pairs_ref = np.insert(extrema_pairs_ref, np.where(
+    #     extrema_pairs[:, -1] == 0)[0], [0, 0], axis=0)
+    # for ind in np.where(extrema_pairs[:, -1] == 0)[0]:
+    #     extrema_pairs_ref = np.insert(extrema_pairs_ref, ind, [0, 0], axis=0)
+
+    try:
+        extrema_pairs_both = np.hstack((extrema_pairs_ref, extrema_pairs))
+        TP_extrema_pairs = extrema_pairs_both[extrema_pairs_both[:, -1] == True]
+    except Exception as e:
+        print(e)
+
+    return np.diff(TP_extrema_pairs[:, 2:4]).flatten(), np.diff(TP_extrema_pairs[:, 0:2]).flatten()
+
+
+def time_compute(TP_peaks, TP_valleys, FN_peaks, FN_valleys, ref_peaks, ref_valleys, sampling_freq=100):
+
+    if (next(iter(ref_peaks.values()))["point"] != TP_peaks[0]) and next(iter(ref_peaks.values()))["point"] != FN_peaks[0]:
+        print("here")
+
+    if (next(iter(ref_valleys.values()))["point"] != TP_valleys[0]) and next(iter(ref_valleys.values()))["point"] != FN_valleys[0]:
+        print("here")
+
+    # create tuples with the indices of the events and a boolean indicating if it is a True event (TP) or False event (FN)
+    TP_peaks_tuple = [(event, True) for event in TP_peaks]
+    TP_valleys_tuple = [(event, True) for event in TP_valleys]
+    FN_peaks_tuple = [(event, False) for event in FN_peaks]
+    FN_valleys_tuple = [(event, False) for event in FN_valleys]
+
+    ref_peaks_tuple = [(ref_peaks[ref_ind]["point"], ref_ind)
+                       for ref_ind in ref_peaks.keys()]
+    ref_valleys_tuple = [(ref_valleys[ref_ind]["point"], ref_ind)
+                         for ref_ind in ref_valleys.keys()]
+
+    # concatenate and sort all events
+    extrema = sorted(TP_peaks_tuple + TP_valleys_tuple +
+                     FN_peaks_tuple + FN_valleys_tuple)
+    extrema_ref = sorted(ref_peaks_tuple + ref_valleys_tuple)
+
+    # get expiration times (tE) -> need to make sure sequence starts at peak
+    time_exp, time_exp_ref = get_TP_times(
+        extrema, extrema_ref,
+        extrema[0][0] in TP_peaks or extrema[0][0] in FN_peaks,
+        extrema_ref[0][0] in TP_peaks or extrema_ref[0][0] in FN_peaks,
+        jump=2)
+    # get inspiration times (tI) -> need to make sure sequence starts at valley
+    time_insp, time_insp_ref = get_TP_times(
+        extrema, extrema_ref,
+        extrema[0][0] in TP_valleys or extrema[0][0] in FN_valleys,
+        extrema_ref[0][0] in TP_valleys or extrema_ref[0][0] in FN_valleys,
+        jump=2)
+
+    # get breathing period (tB)
+    valleys = sorted(TP_valleys_tuple + FN_valleys_tuple)
+    breath_time, breath_time_ref = get_TP_times(
+        valleys, ref_valleys_tuple, True, True, jump=1)
+
+    tB = np.asarray(breath_time)/sampling_freq
+    tI = time_insp/sampling_freq
+    tE = time_exp/sampling_freq
+
+    tB_ref = np.asarray(breath_time_ref)/sampling_freq
+    tI_ref = time_insp_ref/sampling_freq
+    tE_ref = time_exp_ref/sampling_freq
+
+    return tB, tI, tE, tB_ref, tI_ref, tE_ref
+
+
+def time_compute_prev(peak, valley, FP_peak=None, FP_valley=None, positives_peak_ref=0, positives_valley_ref=0):
     '''
     input: indices peak(exp) and valleys(insp)
     output: breathing period (secs); considering a cycle inspiration+expiration; Rejecting isolated expirations at the begining and inspirations at the end
     time from valley to valley == from inspiration to inspiration
 
     '''
+    if FP_peak is not None and len(FP_peak) != 0:
+        print("here")
     if (len(peak) == 0 or len(valley) == 0) and positives_peak_ref == 0:
         return np.array([]), np.array([]), np.array([]), [], []
     elif (len(peak) == 0 or len(valley) == 0) and positives_peak_ref != 0:

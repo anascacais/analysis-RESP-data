@@ -161,8 +161,13 @@ def compute_mre(test_param, target_param):
 def compute_r2_sse(test_param, target_param):
     if len(test_param) == 0:
         return None, None, None
-    linreg = stats.linregress(
-        np.array(target_param), np.array(test_param))
+
+    try:
+        linreg = stats.linregress(
+            np.array(target_param), np.array(test_param))
+
+    except Exception as e:
+        print(e)
 
     slope = linreg.slope
     intercept = linreg.intercept
