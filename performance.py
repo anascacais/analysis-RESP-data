@@ -221,7 +221,7 @@ def get_bias_variability(overview, target, metric, relative_error):
     return bias_variability
 
 
-def bland_altman_plot(mag_test_measures, mag_target_measures, pzt_test_measures, pzt_target_measures, metric):
+def bland_altman_plot(mag_test_measures, mag_target_measures, pzt_test_measures, pzt_target_measures, metric, activity=None):
 
     test_measures = [np.array(mag_test_measures),
                      np.array(pzt_test_measures)]
@@ -237,7 +237,7 @@ def bland_altman_plot(mag_test_measures, mag_target_measures, pzt_test_measures,
     for i, sensor in enumerate(["MAG", "PZT"]):
 
         mean = np.mean([test_measures[i], target_measures[i]], axis=0)
-        diff = test_measures[i] - target_measures[i]
+        diff = (test_measures[i] - target_measures[i])
         md = np.mean(diff)
         sd = np.std(diff, ddof=1)
 
@@ -282,9 +282,15 @@ def bland_altman_plot(mag_test_measures, mag_target_measures, pzt_test_measures,
             trace['showlegend'] = False
 
     fig.update(layout_height=500, layout_width=600)
-    fig.update_layout(yaxis_showticklabels=True,
-                      yaxis2_showticklabels=False, title=f"Blant-Altman plot of {metric}")
+    if activity:
+        fig.update_layout(
+            title=f"Blant-Altman plot of {metric} (for {activity})")
+    else:
+        fig.update_layout(yaxis_showticklabels=True,
+                          yaxis2_showticklabels=False, title=f"Blant-Altman plot of {metric}")
 
     fig.show()
-
-    fig.write_image(f"Results/blandaltman_{metric}.pdf")
+    if activity:
+        fig.write_image(f"Results/blandaltman_{activity}_{metric}.pdf")
+    else:
+        fig.write_image(f"Results/blandaltman_{metric}.pdf")

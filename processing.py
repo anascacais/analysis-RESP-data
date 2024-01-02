@@ -377,7 +377,6 @@ def compute_snr(signal):
 
 
 def evaluate_extremums(extrems, extrem_reference, breaths_reference, interval):
-    # TODO: devolver aqui não apenas o tI, tE e tB do MAG/PZT mas também dos correspondentes do Airflow
     '''
     input: extrems (inspiration=valleys or expiration=peaks); 
     extrem_reference (BIOPAC: inspiration=valleys or expiration=peaks);

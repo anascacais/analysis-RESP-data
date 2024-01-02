@@ -46,6 +46,8 @@ def write_results(id, data_4id, data_raw_4id, acquisition_folderpath, show_fig=T
             peaks_airflow, valleys_airflow)
         br_airflow = (60 * len(tb_airflow)) / np.sum(tb_airflow)
 
+        if activity == "UAL" and id == "1BST":
+            print("UAL")
         # evaluate peaks and valleys from MAG
         FP_s_e, TP_s_e, FN_s_e, performance_clf_s_e, positives_s_e, delay_s_e = evaluate_extremums(
             peaks_mag, peaks_airflow, tb_airflow, interval_airflow)
