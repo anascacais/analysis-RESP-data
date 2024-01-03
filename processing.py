@@ -79,10 +79,13 @@ def flow_reversal(signal):
     '''
     okay = False
     peak, valley = peak_valley(signal)
+
     peak_prom, valley_prom, peak_i, valley_i = peak_prominences(
         signal, peak)[0], peak_prominences(-signal, valley)[0], peak, valley
+
     extrems = np.concatenate((peak, valley))
     extrems = np.sort(extrems)
+
     while not okay:
         okay, remove = remove_extrems(peak, valley, extrems, signal)
         mask = np.isin(peak, remove, invert=True)
