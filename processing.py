@@ -132,55 +132,74 @@ def flow_reversal(signal):
     return peak, valley
 
 
-def get_TP_times(extrema, extrema_ref_og, first_is_right, first_is_right_ref, jump):
+def get_TP_times(extrema, extrema_ref_og, mode, first_is_peak=None):
+    """
+    extrema: list of tuples (index of extremum, TP/FN (True/False), peak/valley)
+    """
 
     extrema_ref = extrema_ref_og.copy()
 
     for ind in np.where(np.array([a[1] for a in extrema]) == False)[0]:
-        extrema_ref.insert(ind, (0, 0))
+        extrema_ref.insert(ind, (0, 0, 0))
 
-    if first_is_right:
-        extrema_pairs = np.array([[tup1[0], tup2[0], all((tup1[1], tup2[1]))] for tup1, tup2 in zip(
-            extrema[::jump], extrema[1::jump])])
-        extrema_pairs_ref = np.array([[tup1[1], tup2[1]] for tup1, tup2 in zip(
-            extrema_ref[::jump], extrema_ref[1::jump])])
-    else:
-        extrema_pairs = np.array([[tup1[0], tup2[0], all((tup1[1], tup2[1]))] for tup1, tup2 in zip(
-            extrema[1::2], extrema[2::2])])
-        extrema_pairs_ref = np.array([[tup1[1], tup2[1]] for tup1, tup2 in zip(
-            extrema_ref[1::2], extrema_ref[2::2])])
+    # extrema_pairs: list of tuples (index of extremum, index of next extremum, if both extrema TP (True/False))
+    # extrema_pairs_ref: list of tuples (index of extremum, index of next extremum)
 
-    # extrema_pairs_ref = np.insert(extrema_pairs_ref, np.where(
-    #     extrema_pairs[:, -1] == 0)[0], [0, 0], axis=0)
-    # for ind in np.where(extrema_pairs[:, -1] == 0)[0]:
-    #     extrema_pairs_ref = np.insert(extrema_pairs_ref, ind, [0, 0], axis=0)
+    if mode == "exp":
+        first_event = "peak"
+        second_event = "valley"
+        jump = 1
+    elif mode == "insp":
+        first_event = "valley"
+        second_event = "peak"
+        jump = 1
+    else:  # mode == "tB"
+        if first_is_peak:
+            first_event = "peak"
+            second_event = "peak"
+        else:
+            first_event = "valley"
+            second_event = "valley"
+        jump = 2
 
-    try:
-        extrema_pairs_both = np.hstack((extrema_pairs_ref, extrema_pairs))
-        TP_extrema_pairs = extrema_pairs_both[extrema_pairs_both[:, -1] == True]
-    except Exception as e:
-        print(e)
+    extrema_pairs = [
+        (extrema[i][0], extrema[i+jump][0],
+            all((extrema[i][1], extrema[i+jump][1])))
+        for i in range(0, len(extrema)-jump)
+        if extrema[i][2] == first_event and extrema[i+jump][2] == second_event
+    ]
+
+    # extrema_pairs_ref = [
+    #     (extrema_ref[i][1], extrema_ref[i+jump][1])
+    #     for i in range(0, len(extrema)-jump)
+    #     if extrema[i][2] == first_event and extrema[i+jump][2] == second_event
+    # ]
+
+    extrema_pairs_ref = [
+        (list(filter(lambda x: x[0] == pair[0], extrema_ref))[0][1], list(
+            filter(lambda x: x[0] == pair[1], extrema_ref))[0][1])
+        if list(filter(lambda x: x[0] == pair[0], extrema_ref)) != [] and list(filter(lambda x: x[0] == pair[1], extrema_ref)) != []
+        else (0, 0)
+        for pair in extrema_pairs
+    ]
+
+    extrema_pairs_both = np.hstack((extrema_pairs_ref, extrema_pairs))
+    TP_extrema_pairs = extrema_pairs_both[extrema_pairs_both[:, -1] == True]
 
     return np.diff(TP_extrema_pairs[:, 2:4]).flatten(), np.diff(TP_extrema_pairs[:, 0:2]).flatten()
 
 
 def time_compute(TP_peaks, TP_valleys, FN_peaks, FN_valleys, ref_peaks, ref_valleys, sampling_freq=100):
 
-    if (next(iter(ref_peaks.values()))["point"] != TP_peaks[0]) and next(iter(ref_peaks.values()))["point"] != FN_peaks[0]:
-        print("here")
-
-    if (next(iter(ref_valleys.values()))["point"] != TP_valleys[0]) and next(iter(ref_valleys.values()))["point"] != FN_valleys[0]:
-        print("here")
-
     # create tuples with the indices of the events and a boolean indicating if it is a True event (TP) or False event (FN)
-    TP_peaks_tuple = [(event, True) for event in TP_peaks]
-    TP_valleys_tuple = [(event, True) for event in TP_valleys]
-    FN_peaks_tuple = [(event, False) for event in FN_peaks]
-    FN_valleys_tuple = [(event, False) for event in FN_valleys]
+    TP_peaks_tuple = [(event, True, "peak") for event in TP_peaks]
+    TP_valleys_tuple = [(event, True, "valley") for event in TP_valleys]
+    FN_peaks_tuple = [(event, False, "peak") for event in FN_peaks]
+    FN_valleys_tuple = [(event, False, "valley") for event in FN_valleys]
 
-    ref_peaks_tuple = [(ref_peaks[ref_ind]["point"], ref_ind)
+    ref_peaks_tuple = [(ref_peaks[ref_ind]["point"], ref_ind, "peak")
                        for ref_ind in ref_peaks.keys()]
-    ref_valleys_tuple = [(ref_valleys[ref_ind]["point"], ref_ind)
+    ref_valleys_tuple = [(ref_valleys[ref_ind]["point"], ref_ind, "valley")
                          for ref_ind in ref_valleys.keys()]
 
     # concatenate and sort all events
@@ -191,20 +210,19 @@ def time_compute(TP_peaks, TP_valleys, FN_peaks, FN_valleys, ref_peaks, ref_vall
     # get expiration times (tE) -> need to make sure sequence starts at peak
     time_exp, time_exp_ref = get_TP_times(
         extrema, extrema_ref,
-        extrema[0][0] in TP_peaks or extrema[0][0] in FN_peaks,
-        extrema_ref[0][0] in TP_peaks or extrema_ref[0][0] in FN_peaks,
-        jump=2)
+        # extrema[0][0] in TP_peaks or extrema[0][0] in FN_peaks,
+        mode="exp")
     # get inspiration times (tI) -> need to make sure sequence starts at valley
     time_insp, time_insp_ref = get_TP_times(
         extrema, extrema_ref,
-        extrema[0][0] in TP_valleys or extrema[0][0] in FN_valleys,
-        extrema_ref[0][0] in TP_valleys or extrema_ref[0][0] in FN_valleys,
-        jump=2)
+        # extrema[0][0] in TP_valleys or extrema[0][0] in FN_valleys,
+        mode="insp")
 
     # get breathing period (tB)
-    valleys = sorted(TP_valleys_tuple + FN_valleys_tuple)
+    # valleys = sorted(TP_valleys_tuple + FN_valleys_tuple)
     breath_time, breath_time_ref = get_TP_times(
-        valleys, ref_valleys_tuple, True, True, jump=1)
+        extrema, extrema_ref, mode="tB",
+        first_is_peak=extrema[0][0] in TP_peaks or extrema[0][0] in FN_peaks)
 
     tB = np.asarray(breath_time)/sampling_freq
     tI = time_insp/sampling_freq
