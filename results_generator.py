@@ -18,7 +18,7 @@ def minmax(data):
     return normalized_data
 
 
-def write_results(id, data_4id, data_raw_4id, acquisition_folderpath, show_fig=True):
+def write_results(id, data_4id, data_raw_4id, acquisition_folderpath, show_fig=True, threshold_acceptability=0.5):
 
     participant_results = {}
 
@@ -49,25 +49,13 @@ def write_results(id, data_4id, data_raw_4id, acquisition_folderpath, show_fig=T
         if activity == "SGB" and id == "EPE2":
             print("ALR")
 
-        # evaluate peaks and valleys from MAG
-        # FP_s_e, TP_s_e, FN_s_e, performance_clf_s_e, positives_s_e, delay_s_e = evaluate_extrema(
-        #     peaks_mag, peaks_airflow, tb_airflow, interval_airflow)
-        # FP_s_i, TP_s_i, FN_s_i, performance_clf_s_i, positives_s_i, delay_s_i = evaluate_extrema(
-        #     valleys_mag, valleys_airflow, tb_airflow, interval_airflow)
         FP_mag, TP_mag, FN_mag, positives_mag, delays_mag = evaluate_extrema(
-            peaks_mag, peaks_airflow, valleys_mag, valleys_airflow, tb_airflow, interval_airflow
+            peaks_mag, peaks_airflow, valleys_mag, valleys_airflow, tb_airflow, interval_airflow, threshold_acceptability
         )
 
         FP_pzt, TP_pzt, FN_pzt, positives_pzt, delays_pzt = evaluate_extrema(
-            peaks_pzt, peaks_airflow, valleys_pzt, valleys_airflow, tb_airflow, interval_airflow
+            peaks_pzt, peaks_airflow, valleys_pzt, valleys_airflow, tb_airflow, interval_airflow, threshold_acceptability
         )
-
-        # evaluate peaks and valleys from BITalino
-        # FP_c_e, TP_c_e, FN_c_e, positives_c_e = evaluate_extrema(
-        # FP_c_e, TP_c_e, FN_c_e, positives_c_e = evaluate_extrema(
-        #     peaks_pzt, peaks_airflow, tb_airflow, interval_airflow)
-        # FP_c_i, TP_c_i, FN_c_i, positives_c_i = evaluate_extrema(
-        #     valleys_pzt, valleys_airflow, tb_airflow, interval_airflow)
 
         if show_fig:
             mag_norm = minmax(mag_data)
