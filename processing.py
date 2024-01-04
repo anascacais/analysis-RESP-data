@@ -36,7 +36,7 @@ def select_by_peak_prominence(extrema, signal, prominence_ratio=0.02, sampling_f
     return extrema[prominences_peaks > prominence_thr], extrema[prominences_valleys > prominence_thr]
 
 
-def peak_valley_prev(signal):
+def peak_valley(signal):
     # , height= np.ptp(integral) * 0.1)
     peak, _ = find_peaks(signal, distance=100)
     # , height= np.ptp(integral) * 0.1)
@@ -44,7 +44,7 @@ def peak_valley_prev(signal):
     return np.asarray(peak), np.asarray(valley)
 
 
-def peak_valley(signal, sampling_freq=100):
+def peak_valley_new(signal, sampling_freq=100):
     # distance between peaks defined as 0.6s, as proposed in "Validation of a Wearable Device and an Algorithm for Respiratory Monitoring during Exercise"
     peak, _ = find_peaks(signal, distance=0.6 *
                          sampling_freq, wlen=30*sampling_freq)
@@ -108,7 +108,7 @@ def remove_extrems(peaks_biopac, valley_biopac, extrems, signal, ref_signal=None
     return okay, np.asarray(remove)
 
 
-def flow_reversal(signal):
+def flow_reversal_new(signal):
 
     extrema = peak_valley(signal)
 
@@ -125,7 +125,7 @@ def flow_reversal(signal):
     return None
 
 
-def flow_reversal_prev(signal):
+def flow_reversal(signal):
     '''
     input: signal
     Compute peaks and valleys
@@ -457,7 +457,64 @@ def compute_snr(signal):
     return 10 * np.log10(lambda_1 / lambda_remaining)
 
 
-def evaluate_extremums(extrems, extrem_reference, breaths_reference, interval):
+def evaluate_extrema(peaks, peaks_ref, valleys, valleys_ref, tb_ref, interval_ref):
+
+    TP, FP, FN = {'exp': [], 'insp': []}, {
+        'exp': [], 'insp': []}, {'exp': [], 'insp': []}
+    positives = {'exp': {}, 'insp': {}}
+    delays = {'exp': [], 'insp': []}
+
+    peaks_ref_tuple = [(event, "peak") for event in peaks_ref]
+    valleys_ref_tuple = [(event, "valley") for event in valleys_ref]
+    extrema_ref_tuple = sorted(peaks_ref_tuple + valleys_ref_tuple)
+
+    last_event_found_ind = 0
+
+    for extremum_ref in extrema_ref_tuple:
+        if extremum_ref[1] == "peak":
+            candidate_events = peaks[peaks > last_event_found_ind]
+            event = "exp"
+        else:
+            candidate_events = valleys[valleys > last_event_found_ind]
+            event = "insp"
+
+        if len(candidate_events) == 0:
+            FN[event].append(extremum_ref[0])
+            break
+
+        extremum_distance = np.abs(
+            candidate_events - extremum_ref[0]
+        )
+        closest_extrem_index = np.argmin(extremum_distance)
+        closest_extrem = candidate_events[closest_extrem_index]
+        thres_distance = thresDistance_peaks(
+            closest_extrem, tb_ref, interval_ref)
+
+        delay = extremum_ref[0] - closest_extrem
+
+        if np.abs(delay) < thres_distance:
+            positives[event][extremum_ref[0]] = {}
+            TP[event].append(closest_extrem)
+            delays[event].append(delay)
+            positives[event][extremum_ref[0]]['point'] = closest_extrem
+            positives[event][extremum_ref[0]]['delay'] = delay
+            last_event_found_ind = closest_extrem
+
+        else:
+            FN[event].append(extremum_ref[0])
+
+    for peak in peaks:
+        if peak not in TP["exp"]:
+            FP["exp"].append(peak)
+
+    for valley in valleys:
+        if valley not in TP["insp"]:
+            FP["insp"].append(valley)
+
+    return FP, TP, FN, positives, delays
+
+
+def evaluate_extremums_prev(extrems, extrem_reference, breaths_reference, interval):
     '''
     input: extrems (inspiration=valleys or expiration=peaks); 
     extrem_reference (BIOPAC: inspiration=valleys or expiration=peaks);
