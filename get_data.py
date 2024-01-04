@@ -129,15 +129,15 @@ def get_delays(overview):
         List with delay measures: ["mean absolute delay (std absolute delay)", delay adjusted to length of mean tB]. The absolute delay is in seconds
     '''
 
-    # inspiration
-    delays_i = pd.Series(overview["delay_i"])
-    adjusted_mean_delay_i = int(
-        pd.Series(overview["adjusted_delay_i"]).mean() * 100)
+    # # inspiration
+    # delays_i = pd.Series(overview["delay_i"])
+    # adjusted_mean_delay_i = int(
+    #     pd.Series(overview["adjusted_delay_i"]).mean() * 100)
 
-    # expiration
-    delay_e = pd.Series(overview["delay_e"])
-    adjusted_mean_delay_e = int(
-        pd.Series(overview["adjusted_delay_e"]).mean() * 100)
+    # # expiration
+    # delay_e = pd.Series(overview["delay_e"])
+    # adjusted_mean_delay_e = int(
+    #     pd.Series(overview["adjusted_delay_e"]).mean() * 100)
 
     # overall
     delays = pd.Series(overview["delay_i"] + overview["delay_e"])

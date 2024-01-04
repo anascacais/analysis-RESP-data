@@ -399,7 +399,7 @@ def time_compute_prev(peak, valley, FP_peak=None, FP_valley=None, positives_peak
         return tB, tI, tE, interval, ds
 
 
-def thresDistance_peaks(point_ref, breaths, interval, thrs=0.5):
+def thresDistance_peaks(point_ref, breaths, interval, thrs):
     '''
     input: period of each breathing
     output: threshold distance considering the mean of 5 breaths (or less)
@@ -457,7 +457,7 @@ def compute_snr(signal):
     return 10 * np.log10(lambda_1 / lambda_remaining)
 
 
-def evaluate_extrema(peaks, peaks_ref, valleys, valleys_ref, tb_ref, interval_ref):
+def evaluate_extrema(peaks, peaks_ref, valleys, valleys_ref, tb_ref, interval_ref, threshold_acceptability):
 
     TP, FP, FN = {'exp': [], 'insp': []}, {
         'exp': [], 'insp': []}, {'exp': [], 'insp': []}
@@ -488,7 +488,7 @@ def evaluate_extrema(peaks, peaks_ref, valleys, valleys_ref, tb_ref, interval_re
         closest_extrem_index = np.argmin(extremum_distance)
         closest_extrem = candidate_events[closest_extrem_index]
         thres_distance = thresDistance_peaks(
-            closest_extrem, tb_ref, interval_ref)
+            closest_extrem, tb_ref, interval_ref, threshold_acceptability)
 
         delay = extremum_ref[0] - closest_extrem
 
