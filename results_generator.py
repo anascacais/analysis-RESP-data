@@ -46,8 +46,9 @@ def write_results(id, data_4id, data_raw_4id, acquisition_folderpath, show_fig=T
             peaks_airflow, valleys_airflow)
         br_airflow = (60 * len(tb_airflow)) / np.sum(tb_airflow)
 
-        if activity == "UAL" and id == "1BST":
-            print("UAL")
+        if activity == "ALR" and id == "QMQ7":
+            print("ALR")
+
         # evaluate peaks and valleys from MAG
         FP_s_e, TP_s_e, FN_s_e, performance_clf_s_e, positives_s_e, delay_s_e = evaluate_extremums(
             peaks_mag, peaks_airflow, tb_airflow, interval_airflow)
@@ -79,7 +80,7 @@ def write_results(id, data_4id, data_raw_4id, acquisition_folderpath, show_fig=T
         tb_mag, ti_mag, te_mag, tb_mag_airflow, ti_mag_airflow, te_mag_airflow = time_compute(
             np.array(TP_s_e), np.array(TP_s_i), np.array(FN_s_e), np.array(FN_s_i), positives_s_e, positives_s_i)
         tb_pzt, ti_pzt, te_pzt, tb_pzt_airflow, ti_pzt_airflow, te_pzt_airflow = time_compute(
-            np.array(TP_c_e), np.array(TP_c_i), np.array(FP_s_e), np.array(FP_s_i), positives_c_e, positives_c_i)
+            np.array(TP_c_e), np.array(TP_c_i), np.array(FN_c_e), np.array(FN_c_i), positives_c_e, positives_c_i)
 
         # print('Scientisst: tb', tb_a, 'ti' ,ti_a ,'te', te_a)
         if len(tb_mag) != 0:
