@@ -1,14 +1,56 @@
 # third-party
 import numpy as np
 from scipy.signal import find_peaks, peak_prominences, savgol_filter
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
+
+# biosppy.signals.tools.find_extrema
 
 
-def peak_valley(signal):
+def select_by_peak_prominence(extrema, signal, prominence_ratio=0.02, sampling_freq=100):
+    """Select peaks by distance.
+    Parameters
+    ----------
+    peaks : array
+        The peaks to be selected.
+    amplitudes : array
+        The amplitudes of the peaks.
+    distance : int
+        The minimum distance between peaks.
+    Returns
+    -------
+    selected_peaks : array
+        The selected peaks.
+    selected_amplitudes : array
+        The amplitudes of the selected peaks.
+    """
+
+    prominences_peaks = peak_prominences(
+        signal, extrema, wlen=30*sampling_freq)[0]
+    prominences_valleys = peak_prominences(-signal,
+                                           extrema, wlen=30*sampling_freq)[0]
+
+    pkpk_amp = np.amax(signal) - np.amin(signal)
+    prominence_thr = pkpk_amp * prominence_ratio
+
+    return extrema[prominences_peaks > prominence_thr], extrema[prominences_valleys > prominence_thr]
+
+
+def peak_valley_prev(signal):
     # , height= np.ptp(integral) * 0.1)
     peak, _ = find_peaks(signal, distance=100)
     # , height= np.ptp(integral) * 0.1)
     valley, _ = find_peaks(-signal, distance=100)
     return np.asarray(peak), np.asarray(valley)
+
+
+def peak_valley(signal, sampling_freq=100):
+    # distance between peaks defined as 0.6s, as proposed in "Validation of a Wearable Device and an Algorithm for Respiratory Monitoring during Exercise"
+    peak, _ = find_peaks(signal, distance=0.6 *
+                         sampling_freq, wlen=30*sampling_freq)
+    valley, _ = find_peaks(-signal, distance=0.6 *
+                           sampling_freq, wlen=30*sampling_freq)
+    return np.sort(np.concatenate((peak, valley)))
 
 
 def preprocess(mag_data, airflow_data, pzt_data):
@@ -33,7 +75,7 @@ def preprocess(mag_data, airflow_data, pzt_data):
     return mag_data, airflow_data, pzt_data
 
 
-def remove_extrems(peaks_biopac, valley_biopac, extrems, signal):
+def remove_extrems(peaks_biopac, valley_biopac, extrems, signal, ref_signal=None):
     '''
     Run all signal 
 
@@ -67,6 +109,23 @@ def remove_extrems(peaks_biopac, valley_biopac, extrems, signal):
 
 
 def flow_reversal(signal):
+
+    extrema = peak_valley(signal)
+
+    peaks, valleys = select_by_peak_prominence(extrema, signal)
+
+    # fig = make_subplots(specs=[[{"secondary_y": True}]])
+    # # plot sensor and airflow signals
+    # fig.add_trace(go.Scatter(y=signal, name="signal"))
+    # fig.add_trace(go.Scatter(x=extrema, y=signal[extrema], mode='markers'))
+    # for ext in extrema_keep:
+    #     fig.add_vline(x=ext)
+    # fig.show()
+
+    return None
+
+
+def flow_reversal_prev(signal):
     '''
     input: signal
     Compute peaks and valleys
@@ -87,7 +146,8 @@ def flow_reversal(signal):
     extrems = np.sort(extrems)
 
     while not okay:
-        okay, remove = remove_extrems(peak, valley, extrems, signal)
+        okay, remove = remove_extrems(
+            peak, valley, extrems, signal)
         mask = np.isin(peak, remove, invert=True)
         peak = peak[mask]
         mask = np.isin(valley, remove, invert=True)
