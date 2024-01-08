@@ -182,8 +182,8 @@ def compute_r2_sse(test_param, target_param):
 
 def get_relative_errors(target_param, test_param):
 
-    abs_error = np.array(target_param) - np.array(test_param)
-    return abs_error / np.array(target_param)
+    error = np.array(target_param) - np.array(test_param)
+    return error / np.array(target_param)
 
 
 def bland_altman_analysis(test_measures, target_measures):
@@ -217,6 +217,31 @@ def get_bias_variability(overview, target, metric, relative_error):
                     overview[key][device][f"{metric} (s)"], overview[key][device][f"{metric} airflow (s)"])
 
                 bias_variability.loc[len(bias_variability)] = new_entry
+
+    elif target == "both":
+        bias_variability = pd.DataFrame(columns=[
+            "ID", "Activity", "Sensor", f"Bias ({unit})", f"Variability ({unit})"])
+        for id in overview.keys():
+            for activity in overview[id].keys():
+                for device in ["MAG", "PZT"]:
+                    new_entry = {}
+                    new_entry["ID"] = id
+                    new_entry["Activity"] = activity
+                    new_entry["Sensor"] = device
+                    new_entry[f"Bias ({unit})"], new_entry[f"Variability ({unit})"] = bland_altman_analysis(
+                        overview[id][activity][device][f"{metric} (s)"], overview[id][activity][device][f"{metric} airflow (s)"])
+
+                    bias_variability.loc[len(bias_variability)] = new_entry
+    else:
+        bias_variability = pd.DataFrame(columns=[
+            "Sensor", f"Bias ({unit})", f"Variability ({unit})"])
+        for device in ["MAG", "PZT"]:
+            new_entry = {}
+            new_entry["Sensor"] = device
+            new_entry[f"Bias ({unit})"], new_entry[f"Variability ({unit})"] = bland_altman_analysis(
+                overview[device][f"{metric} (s)"], overview[device][f"{metric} airflow (s)"])
+
+            bias_variability.loc[len(bias_variability)] = new_entry
 
     return bias_variability
 
@@ -284,10 +309,20 @@ def bland_altman_plot(mag_test_measures, mag_target_measures, pzt_test_measures,
     fig.update(layout_height=500, layout_width=600)
     if activity:
         fig.update_layout(
-            title=f"Blant-Altman plot of {metric} (for {activity})")
+            title=f"Blant-Altman plot of {metric} (for {activity})",
+            margin=go.layout.Margin(
+                # b=50,  # bottom margin
+                t=50,  # top margin
+            )
+        )
     else:
         fig.update_layout(yaxis_showticklabels=True,
-                          yaxis2_showticklabels=False, title=f"Blant-Altman plot of {metric}")
+                          yaxis2_showticklabels=False, title=f"Blant-Altman plot of {metric}",
+                          margin=go.layout.Margin(
+                              # b=10,  # bottom margin
+                              t=50,  # top margin
+                          )
+                          )
 
     fig.show()
     if activity:
