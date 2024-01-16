@@ -317,7 +317,8 @@ def bland_altman_plot(mag_test_measures, mag_target_measures, pzt_test_measures,
         )
     else:
         fig.update_layout(yaxis_showticklabels=True,
-                          yaxis2_showticklabels=False, title=f"Blant-Altman plot of {metric}",
+                          yaxis2_showticklabels=False,
+                          # title=f"Blant-Altman plot of {metric}",
                           margin=go.layout.Margin(
                               # b=10,  # bottom margin
                               t=50,  # top margin
