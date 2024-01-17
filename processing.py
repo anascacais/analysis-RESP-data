@@ -54,7 +54,7 @@ def peak_valley_new(signal, sampling_freq=100):
     return np.sort(np.concatenate((peak, valley)))
 
 
-def preprocess_old(mag_data, airflow_data, pzt_data, window_size=100):
+def preprocess4visualization(mag_data, airflow_data, pzt_data, window_size=100):
 
     # de-mean
     mag_data = mag_data - mag_data.mean()
