@@ -298,7 +298,7 @@ def bland_altman_plot(mag_test_measures, mag_target_measures, pzt_test_measures,
         ), row=1, col=i+1)
 
         print(
-            f"{sensor} | mean: {md:.3f}, lloa: {md - 1.96*sd:.2f}, uloa: {md + 1.96*sd:.2f} ")
+            f"{sensor} | mean: {md:.3f}, loa: [{md - 1.96*sd:.2f}, {md + 1.96*sd:.2f}]")
 
     for j, trace in enumerate(fig['data']):
         if j in [0, 1]:
