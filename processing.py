@@ -72,7 +72,7 @@ def preprocess4visualization(mag_data, airflow_data, pzt_data, window_size=100):
     # filter
     mag_data = savgol_filter(mag_data, window_size, 2)
     pzt_data = savgol_filter(pzt_data, window_size, 2)
-    airflow_data = savgol_filter(airflow_data, window_size, 2)
+    # airflow_data = savgol_filter(airflow_data, window_size, 2)
 
     return mag_data, airflow_data, pzt_data
 

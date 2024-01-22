@@ -79,7 +79,7 @@ def normality_test(data, sensor, type, categorical_palette=None):
     fig.show()
 
 
-def plot_inspiration_vs_expiration(delays_df, categorical_palette=None):
+def plot_inspiration_vs_expiration(delays_df, target, categorical_palette=None, set_dim=True):
     ''' 
     Plot the distribution (as violin plots) of the delays for each sensor, comparing, side-by-side, the type of breath (Inhalation or Exhalation)
 
@@ -97,17 +97,17 @@ def plot_inspiration_vs_expiration(delays_df, categorical_palette=None):
     else:
         categorical_palette = iter(categorical_palette)
 
-    fig.add_trace(go.Violin(x=delays_df['Sensor'][delays_df['Type'] == 'Inhalation'],
+    fig.add_trace(go.Violin(x=delays_df[target][delays_df['Type'] == 'delay_i'],
                             y=delays_df['Delay'][delays_df['Type']
-                                                 == 'Inhalation'],
-                            legendgroup='Inspiration', scalegroup='Inhalation', name='Inspiration',
+                                                 == 'delay_i'],
+                            legendgroup='Inspiration', scalegroup='delay_i', name='Inspiration',
                             side='negative',
                             line_color=next(categorical_palette))
                   )
-    fig.add_trace(go.Violin(x=delays_df['Sensor'][delays_df['Type'] == 'Exhalation'],
+    fig.add_trace(go.Violin(x=delays_df[target][delays_df['Type'] == 'delay_e'],
                             y=delays_df['Delay'][delays_df['Type']
-                                                 == 'Exhalation'],
-                            legendgroup='Expiration', scalegroup='Exhalation', name='Expiration',
+                                                 == 'delay_e'],
+                            legendgroup='Expiration', scalegroup='delay_e', name='Expiration',
                             side='positive',
                             line_color=next(categorical_palette))
                   )
@@ -120,8 +120,6 @@ def plot_inspiration_vs_expiration(delays_df, categorical_palette=None):
         yaxis={
             'title': 'Delay (in seconds)'
         },
-        height=600,
-        width=600,
         template='plotly_white',
         violinmode='overlay',
         margin=go.layout.Margin(
@@ -131,5 +129,65 @@ def plot_inspiration_vs_expiration(delays_df, categorical_palette=None):
         )
     )
     # fig.update_layout(violingap=0, violinmode='overlay')
+    if set_dim:
+        fig.update_layout(
+            height=500,
+            width=500,)
     fig.show()
-    fig.write_image("Results/delay_violin_dist.pdf")
+    fig.write_image(f"Results/delay_violin_dist_{target}.pdf")
+
+
+# def plot_inspiration_vs_expiration(delays_df, target, categorical_palette=None):
+#     '''
+#     Plot the distribution (as violin plots) of the delays for each sensor, comparing, side-by-side, the type of breath (Inhalation or Exhalation)
+
+#     Parameters
+#     ----------
+#     delays_df: pd.DataFrame
+#         Dataframe with individual delay instances, with 3 columns: [Sensor, Type, Delay], where "Sensor" is the sensor name, "Type" is the type of breath (Inhalation or Exhalation) and "Delay" is the delay in seconds.
+
+#     '''
+
+#     fig = go.Figure()
+
+#     if not categorical_palette:
+#         categorical_palette = iter(CATEGORICAL_PALETTE)
+#     else:
+#         categorical_palette = iter(categorical_palette)
+
+#     fig.add_trace(go.Violin(x=delays_df['Sensor'][delays_df['Type'] == 'Inhalation'],
+#                             y=delays_df['Delay'][delays_df['Type']
+#                                                  == 'Inhalation'],
+#                             legendgroup='Inspiration', scalegroup='Inhalation', name='Inspiration',
+#                             side='negative',
+#                             line_color=next(categorical_palette))
+#                   )
+#     fig.add_trace(go.Violin(x=delays_df['Sensor'][delays_df['Type'] == 'Exhalation'],
+#                             y=delays_df['Delay'][delays_df['Type']
+#                                                  == 'Exhalation'],
+#                             legendgroup='Expiration', scalegroup='Exhalation', name='Expiration',
+#                             side='positive',
+#                             line_color=next(categorical_palette))
+#                   )
+#     fig.update_traces(meanline_visible=True, width=1.2)
+#     fig.update_layout(
+#         # title=f'Delay distribution for each sensor (inspiration vs expiration)',
+#         xaxis={
+#             'title': 'Sensors'
+#         },
+#         yaxis={
+#             'title': 'Delay (in seconds)'
+#         },
+#         height=500,
+#         width=500,
+#         template='plotly_white',
+#         violinmode='overlay',
+#         margin=go.layout.Margin(
+#             b=10,  # bottom margin
+#             r=10,  # right margin
+#             t=10,  # top margin
+#         )
+#     )
+#     # fig.update_layout(violingap=0, violinmode='overlay')
+#     fig.show()
+#     fig.write_image("Results/delay_violin_dist.pdf")
