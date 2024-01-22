@@ -5,7 +5,7 @@ import numpy as np
 
 # local
 from files import load_raw_data
-from processing import preprocess
+from processing import preprocess, preprocess4visualization
 
 # built-in
 import os
@@ -20,7 +20,7 @@ def get_participant_ids(acquisition_folderpath):
     return id_participants
 
 
-def get_data_by_id_activity(acquisition_folderpath, save=False):
+def get_data_by_id_activity(acquisition_folderpath, save=False, processing4visualization=False):
     '''
     Returns
     -------
@@ -52,12 +52,19 @@ def get_data_by_id_activity(acquisition_folderpath, save=False):
             data_raw[id][activity] = pd.DataFrame(
                 columns=['mag', 'airflow', 'pzt'])
 
-            mag_data_4activity = mag_data['MAG'][activities_info[activity]['start_ind_scientisst']: activities_info[activity]['start_ind_scientisst'] + activities_info[activity]['length']]
-            airflow_data_4activity = airflow_data['Airflow'][activities_info[activity]['start_ind_biopac']: activities_info[activity]['start_ind_biopac'] + activities_info[activity]['length']]
-            pzt_data_4activity = pzt_data['PZT'][activities_info[activity]['start_ind_bitalino']: activities_info[activity]['start_ind_bitalino'] + activities_info[activity]['length']]
+            mag_data_4activity = mag_data['MAG'][activities_info[activity]['start_ind_scientisst']
+                : activities_info[activity]['start_ind_scientisst'] + activities_info[activity]['length']]
+            airflow_data_4activity = airflow_data['Airflow'][activities_info[activity]['start_ind_biopac']
+                : activities_info[activity]['start_ind_biopac'] + activities_info[activity]['length']]
+            pzt_data_4activity = pzt_data['PZT'][activities_info[activity]['start_ind_bitalino']
+                : activities_info[activity]['start_ind_bitalino'] + activities_info[activity]['length']]
 
-            mag_data_processed, airflow_data_processed, pzt_data_processed = preprocess(
-                mag_data_4activity, airflow_data_4activity, pzt_data_4activity)
+            if processing4visualization:
+                mag_data_processed, airflow_data_processed, pzt_data_processed = preprocess4visualization(
+                    mag_data_4activity, airflow_data_4activity, pzt_data_4activity)
+            else:
+                mag_data_processed, airflow_data_processed, pzt_data_processed = preprocess(
+                    mag_data_4activity, airflow_data_4activity, pzt_data_4activity)
 
             data[id][activity]['mag'] = mag_data_processed
             data[id][activity]['airflow'] = airflow_data_processed

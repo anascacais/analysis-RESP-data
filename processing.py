@@ -1,8 +1,9 @@
 # third-party
 import numpy as np
-from scipy.signal import find_peaks, peak_prominences, savgol_filter
+from scipy.signal import find_peaks, peak_prominences, savgol_filter, filtfilt
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
+import biosppy.signals.tools as st
 
 # biosppy.signals.tools.find_extrema
 
@@ -53,7 +54,7 @@ def peak_valley_new(signal, sampling_freq=100):
     return np.sort(np.concatenate((peak, valley)))
 
 
-def preprocess(mag_data, airflow_data, pzt_data):
+def preprocess4visualization(mag_data, airflow_data, pzt_data, window_size=100):
 
     # de-mean
     mag_data = mag_data - mag_data.mean()
@@ -63,14 +64,40 @@ def preprocess(mag_data, airflow_data, pzt_data):
     # invert MAG data
     mag_data = -mag_data
 
+    # integral
+    X = np.asarray(airflow_data - np.mean(airflow_data))
+    dt = 1/100
+    airflow_data = np.cumsum(X) * dt
+
     # filter
-    mag_data = savgol_filter(mag_data, 100, 2)
-    pzt_data = savgol_filter(pzt_data, 100, 2)
+    mag_data = savgol_filter(mag_data, window_size, 2)
+    pzt_data = savgol_filter(pzt_data, window_size, 2)
+    # airflow_data = savgol_filter(airflow_data, window_size, 2)
+
+    return mag_data, airflow_data, pzt_data
+
+
+def preprocess(mag_data, airflow_data, pzt_data, sampling_freq=100, fc=[0.01, 0.35]):
+
+    # de-mean
+    mag_data = mag_data - mag_data.mean()
+    airflow_data = airflow_data - airflow_data.mean()
+    pzt_data = pzt_data - pzt_data.mean()
+
+    # invert MAG data
+    mag_data = -mag_data
 
     # integral
     X = np.asarray(airflow_data - np.mean(airflow_data))
     dt = 1/100
     airflow_data = np.cumsum(X) * dt
+
+    mag_data = st.filter_signal(mag_data, ftype='butter', band='bandpass',
+                                order=2, frequency=fc, sampling_rate=sampling_freq)['signal']
+    pzt_data = st.filter_signal(pzt_data, ftype='butter', band='bandpass',
+                                order=2, frequency=fc, sampling_rate=sampling_freq)['signal']
+    airflow_data = st.filter_signal(airflow_data, ftype='butter', band='bandpass',
+                                    order=2, frequency=fc, sampling_rate=sampling_freq)['signal']
 
     return mag_data, airflow_data, pzt_data
 
