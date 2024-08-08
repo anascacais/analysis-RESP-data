@@ -1,0 +1,6 @@
+thr,Ratio,Precision,Recall,tI,tI error SD,tE,tE error SD,tB,tB error SD
+0.1,,,,,,,,,
+0.2,,,,,,,,,
+0.3,,,,,,,,,
+0.4,,,,,,,,,
+0.5,0.97,0.97,0.95,8.37,12.04,8.11,11.07,4.08,5.76

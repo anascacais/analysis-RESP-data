@@ -10,9 +10,9 @@ A set of 12 different activities were performed by 16 healthy subjects, simultan
 
 For the context of monitoring respiratory patterns, at this stage it would be enough to test the performance of the prototype in the representation of flow reversal (FR) events, aka the onset of **inspiration** and **expiration**. To characterize the prototype the main objectives were to answer the following questions:
 
-**Q1:** What is the accuracy of detection of FR events and key respiratory measures in comparison to the PZT sensor?
-**Q2:** Does the prototype have differential performance under different activities?
-**Q3:** Can we use the prototype to compute key respiratory metrics?
+**Q1:** What is the accuracy of detection of FR events and key respiratory measures in comparison to the PZT sensor?  
+ **Q2:** Does the prototype have differential performance under different activities?  
+ **Q3:** Can we use the prototype to compute key respiratory metrics?
 
 ## Exploring data
 
