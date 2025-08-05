@@ -1,5 +1,7 @@
 # Data Analysis on Respiratory Data
 
+Scientific paper available at: https://doi.org/10.1109/TBME.2024.3367536
+
 ## Validation of a prototype
 
 After proposing a novel methodology for respiration monitoring (based on magnetic field variations), I had to validate it against an analogous commercially available sensor (piezoelectric, PZT, sensor), using a gold-standard (airflow transducer) as reference.
@@ -54,7 +56,3 @@ This analysis revealed a large agreement between all metrics, in particular for 
 ## Final insights
 
 Overall, the prototype has shown comparable performances to a commercially-available analogous sensor, and in some circumstances even surpassing it. Despite adequate performance in a majority of contexts, care is advised when activities that imply significant torso mobility is required.
-
-### Other info
-
-Scientific paper available at: https://doi.org/10.1109/TBME.2024.3367536
