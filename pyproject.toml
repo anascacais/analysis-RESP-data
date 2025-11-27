@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools >= 64.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "respiratoryanalysis"
+dynamic = ["version"]
+readme = "README.md"
+license = { file = "LICENSE" }
+description = "Short description."
+authors = [{ name = "Ana Sofia Carmo", email = "anascacais@gmail.com" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent"
+]
+dependencies = [
+  "numpy",
+  "pandas",
+  "scipy",
+  "plotly",
+  "biosppy",
+  "peakutils"
+]
+
+[project.urls]
+Repository = "https://github.com/anascacais/respiratoryanalysis"
+
+[tool.setuptools.dynamic]
+version = {attr = "respiratoryanalysis.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["respiratoryanalysis"]
