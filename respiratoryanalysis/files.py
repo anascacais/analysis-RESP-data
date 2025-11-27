@@ -5,9 +5,46 @@ import pickle
 
 # third party
 import pandas as pd
+import numpy as np
 
 
-def load_raw_data(acquisition_folderpath, id):
+def load_raw_data(acquisition_folderpath, id, activity):
+    '''
+    Returns
+    -------
+    mag_data, airflow_data, pzt_data: array
+        Full non-processed data for each device, in real units.
+    '''
+    data = pd.read_csv(os.path.join(acquisition_folderpath,
+                                    f'{id}_{activity}.csv'), sep='\t',  comment="#", header=0, index_col=False)
+
+    airflow_data = np.reshape(data[["Airflow raw (ml/s)"]].values, (-1,))
+    mag_data = np.reshape(data[["MAG raw (mV)"]].values, (-1,))
+    pzt_data = np.reshape(data[["PZT raw (mV)"]].values, (-1,))
+    return mag_data, airflow_data, pzt_data
+
+
+def load_raw_processed_data(acquisition_folderpath, id, activity):
+    '''
+    Returns
+    -------
+    mag_data, airflow_data, pzt_data: array
+        Full non-processed data for each device, in real units.
+    '''
+    data = pd.read_csv(os.path.join(acquisition_folderpath,
+                                    f'{id}_{activity}.csv'), sep='\t',  comment="#", header=0, index_col=False)
+
+    raw_airflow_data = data[["Airflow raw (ml/s)"]].values
+    raw_mag_data = data[["MAG raw (mV)"]].values
+    raw_pzt_data = data[["PZT raw (mV)"]].values
+
+    airflow_data = data[["Airflow (ml/s)"]].values
+    mag_data = data[["MAG (mV)"]].values
+    pzt_data = data[["PZT (mV)"]].values
+    return raw_airflow_data, raw_mag_data, raw_pzt_data, airflow_data, mag_data, pzt_data
+
+
+def load_raw_data_prev(acquisition_folderpath, id):
     '''  brief description 
 
     Parameters

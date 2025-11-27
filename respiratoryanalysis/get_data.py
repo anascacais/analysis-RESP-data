@@ -4,12 +4,23 @@ import pickle
 import numpy as np
 
 # local
-from files import load_raw_data
-from processing import preprocess, preprocess4visualization
+from respiratoryanalysis.files import load_raw_data
+from respiratoryanalysis.processing import preprocess, preprocess4visualization
 
 # built-in
 import os
 import json
+
+
+def list_activities(acquisition_folderpath):
+    data_files = [f for f in os.listdir(
+        acquisition_folderpath) if f.endswith('.csv')]
+    activities = set()
+    for file in data_files:
+        parts = file.split('_')
+        activity = parts[1].split('.')[0]
+        activities.add(activity)
+    return list(activities)
 
 
 def get_participant_ids(acquisition_folderpath):
@@ -20,7 +31,61 @@ def get_participant_ids(acquisition_folderpath):
     return id_participants
 
 
-def get_data_by_id_activity(acquisition_folderpath, save=False, processing4visualization=False):
+def get_data_by_id_activity(acquisition_folderpath, id_participants, activities, save=False, processing4visualization=False):
+    '''
+    Returns
+    -------
+    data: dict
+        Dictionary where keys are, recursively, participant ID and then activity. The last "value" corresponds to a pd.DataFrame with the resp signal timeseries for ['mag', 'airflow', 'pzt']
+    '''
+    data = {}
+    data_raw = {}
+
+    print('Getting data for participants...')
+    for id in id_participants:
+        print(' ---------', id, '---------------')
+
+        data[id] = {}
+        data_raw[id] = {}
+
+        for activity in activities:
+
+            data[id][activity] = pd.DataFrame(
+                columns=['mag', 'airflow', 'pzt'])
+            data_raw[id][activity] = pd.DataFrame(
+                columns=['mag', 'airflow', 'pzt'])
+
+            try:
+                mag_data_4activity, airflow_data_4activity, pzt_data_4activity = load_raw_data(
+                    acquisition_folderpath, id, activity)
+            except FileNotFoundError:
+                print(
+                    f"Data for participant {id} and activity {activity} not found. Skipping...")
+                continue
+
+            if processing4visualization:
+                mag_data_processed, airflow_data_processed, pzt_data_processed = preprocess4visualization(
+                    mag_data_4activity, airflow_data_4activity, pzt_data_4activity)
+            else:
+                mag_data_processed, airflow_data_processed, pzt_data_processed = preprocess(
+                    mag_data_4activity, airflow_data_4activity, pzt_data_4activity)
+
+            data[id][activity]['mag'] = mag_data_processed
+            data[id][activity]['airflow'] = airflow_data_processed
+            data[id][activity]['pzt'] = pzt_data_processed
+
+            data_raw[id][activity]['mag'] = mag_data_4activity
+            data_raw[id][activity]['airflow'] = airflow_data_4activity
+            data_raw[id][activity]['pzt'] = pzt_data_4activity
+
+    if save:
+        with open(os.path.join('Results', 'data_by_participant_activity.pickle'), 'wb') as file:
+            pickle.dump(data, file, protocol=pickle.HIGHEST_PROTOCOL)
+
+    return data, data_raw
+
+
+def get_data_by_id_activity_prev(acquisition_folderpath, id_participants, save=False, processing4visualization=False):
     '''
     Returns
     -------
@@ -28,9 +93,6 @@ def get_data_by_id_activity(acquisition_folderpath, save=False, processing4visua
         Dictionary where keys are, recursively, participant ID and then activity. The last "value" corresponds to a pd.DataFrame with the resp signal timeseries for ['mag', 'airflow', 'pzt']
 
     '''
-
-    id_participants = get_participant_ids(acquisition_folderpath)
-
     data = {}
     data_raw = {}
     print('Getting data for participants...')
@@ -52,12 +114,9 @@ def get_data_by_id_activity(acquisition_folderpath, save=False, processing4visua
             data_raw[id][activity] = pd.DataFrame(
                 columns=['mag', 'airflow', 'pzt'])
 
-            mag_data_4activity = mag_data['MAG'][activities_info[activity]['start_ind_scientisst']
-                : activities_info[activity]['start_ind_scientisst'] + activities_info[activity]['length']]
-            airflow_data_4activity = airflow_data['Airflow'][activities_info[activity]['start_ind_biopac']
-                : activities_info[activity]['start_ind_biopac'] + activities_info[activity]['length']]
-            pzt_data_4activity = pzt_data['PZT'][activities_info[activity]['start_ind_bitalino']
-                : activities_info[activity]['start_ind_bitalino'] + activities_info[activity]['length']]
+            mag_data_4activity = mag_data['MAG'][activities_info[activity]['start_ind_scientisst']                                                 : activities_info[activity]['start_ind_scientisst'] + activities_info[activity]['length']]
+            airflow_data_4activity = airflow_data['Airflow'][activities_info[activity]['start_ind_biopac']                                                             : activities_info[activity]['start_ind_biopac'] + activities_info[activity]['length']]
+            pzt_data_4activity = pzt_data['PZT'][activities_info[activity]['start_ind_bitalino']                                                 : activities_info[activity]['start_ind_bitalino'] + activities_info[activity]['length']]
 
             if processing4visualization:
                 mag_data_processed, airflow_data_processed, pzt_data_processed = preprocess4visualization(
