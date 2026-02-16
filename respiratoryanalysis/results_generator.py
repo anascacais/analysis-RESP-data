@@ -7,8 +7,8 @@ import numpy as np
 from plotly import graph_objs as go
 
 # local
-from files import save_results
-from processing import flow_reversal, time_compute, evaluate_extrema, compute_snr, time_compute_prev
+from respiratoryanalysis.files import save_results
+from respiratoryanalysis.processing import flow_reversal, time_compute, evaluate_extrema, compute_snr, time_compute_prev
 
 
 def minmax(data):

@@ -6,7 +6,7 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
 # local
-from get_data import get_performance_metrics, get_delays
+from respiratoryanalysis.get_data import get_performance_metrics, get_delays
 from respiratoryanalysis.constants import CATEGORICAL_PALETTE
 
 
@@ -71,7 +71,7 @@ def get_fr_detection_performance(overview, target):
     return fr_detection
 
 
-def get_breath_parameters_performance(overview, target):
+def get_breath_parameters_performance_display(overview, target):
 
     if target in ["ID", "Activity"]:
         breath_parameters = pd.DataFrame(columns=[
@@ -81,10 +81,10 @@ def get_breath_parameters_performance(overview, target):
                 new_entry = {}
                 new_entry[target] = key
                 new_entry["Sensor"] = device
-                new_entry["MAE Ti (s)"], new_entry["MAE Te (s)"], new_entry["MAE Tb (s)"] = compute_mae(overview[key][device]["tI (s)"], overview[key][device]["tI airflow (s)"]), compute_mae(
-                    overview[key][device]["tE (s)"], overview[key][device]["tE airflow (s)"]), compute_mae(overview[key][device]["tB (s)"], overview[key][device]["tB airflow (s)"])
-                new_entry["MRE Ti (%)"], new_entry["MRE Te (%)"], new_entry["MRE Tb (%)"] = compute_mre(overview[key][device]["tI (s)"], overview[key][device]["tI airflow (s)"]), compute_mre(
-                    overview[key][device]["tE (s)"], overview[key][device]["tE airflow (s)"]), compute_mre(overview[key][device]["tB (s)"], overview[key][device]["tB airflow (s)"])
+                new_entry["MAE Ti (s)"], new_entry["MAE Te (s)"], new_entry["MAE Tb (s)"] = compute_mae_display(overview[key][device]["tI (s)"], overview[key][device]["tI airflow (s)"]), compute_mae_display(
+                    overview[key][device]["tE (s)"], overview[key][device]["tE airflow (s)"]), compute_mae_display(overview[key][device]["tB (s)"], overview[key][device]["tB airflow (s)"])
+                new_entry["MRE Ti (%)"], new_entry["MRE Te (%)"], new_entry["MRE Tb (%)"] = compute_mre_display(overview[key][device]["tI (s)"], overview[key][device]["tI airflow (s)"]), compute_mre_display(
+                    overview[key][device]["tE (s)"], overview[key][device]["tE airflow (s)"]), compute_mre_display(overview[key][device]["tB (s)"], overview[key][device]["tB airflow (s)"])
                 # new_entry["R^2 Ti"], new_entry["SSE Ti"], _ = compute_r2_sse(
                 #     overview[key][device]["tI (s)"], overview[key][device]["tI airflow (s)"])
                 # new_entry["R^2 Te"], new_entry["SSE Te"], _ = compute_r2_sse(
@@ -103,16 +103,77 @@ def get_breath_parameters_performance(overview, target):
                     new_entry["ID"] = id
                     new_entry["Activity"] = activity
                     new_entry["Sensor"] = device
-                    new_entry["MAE Ti (s)"], new_entry["MAE Te (s)"], new_entry["MAE Tb (s)"] = compute_mae(overview[id][activity][device]["tI (s)"], overview[id][activity][device]["tI airflow (s)"]), compute_mae(
-                        overview[id][activity][device]["tE (s)"], overview[id][activity][device]["tE airflow (s)"]), compute_mae(overview[id][activity][device]["tB (s)"], overview[id][activity][device]["tB airflow (s)"])
-                    new_entry["MRE Ti (%)"], new_entry["MRE Te (%)"], new_entry["MRE Tb (%)"] = compute_mre(overview[id][activity][device]["tI (s)"], overview[id][activity][device]["tI airflow (s)"]), compute_mre(
-                        overview[id][activity][device]["tE (s)"], overview[id][activity][device]["tE airflow (s)"]), compute_mre(overview[id][activity][device]["tB (s)"], overview[id][activity][device]["tB airflow (s)"])
+                    new_entry["MAE Ti (s)"], new_entry["MAE Te (s)"], new_entry["MAE Tb (s)"] = compute_mae_display(overview[id][activity][device]["tI (s)"], overview[id][activity][device]["tI airflow (s)"]), compute_mae_display(
+                        overview[id][activity][device]["tE (s)"], overview[id][activity][device]["tE airflow (s)"]), compute_mae_display(overview[id][activity][device]["tB (s)"], overview[id][activity][device]["tB airflow (s)"])
+                    new_entry["MRE Ti (%)"], new_entry["MRE Te (%)"], new_entry["MRE Tb (%)"] = compute_mre_display(overview[id][activity][device]["tI (s)"], overview[id][activity][device]["tI airflow (s)"]), compute_mre_display(
+                        overview[id][activity][device]["tE (s)"], overview[id][activity][device]["tE airflow (s)"]), compute_mre_display(overview[id][activity][device]["tB (s)"], overview[id][activity][device]["tB airflow (s)"])
                     # new_entry["R^2 Ti"], new_entry["SSE Ti"], _ = compute_r2_sse(
                     #     overview[id][activity][device]["tI (s)"], overview[id][activity][device]["tI airflow (s)"])
                     # new_entry["R^2 Te"], new_entry["SSE Te"], _ = compute_r2_sse(
                     #     overview[id][activity][device]["tE (s)"], overview[id][activity][device]["tE airflow (s)"])
                     # new_entry["R^2 Tb"], new_entry["SSE Tb"], _ = compute_r2_sse(
                     #     overview[id][activity][device]["tB (s)"], overview[id][activity][device]["tB airflow (s)"])
+                    breath_parameters.loc[len(breath_parameters)] = new_entry
+
+    else:
+        breath_parameters = pd.DataFrame(columns=[
+            "Parameter", "Sensor", "Abs. error (s)", "Rel. error (%)", "Slope", "Intercept", "R^2"])
+
+        for parameter in ["tI", "tE", "tB"]:
+            print(
+                f'N={len(overview["MAG"][f"{parameter} (s)"])} {parameter} for MAG')
+            print(
+                f'N={len(overview["PZT"][f"{parameter} (s)"])} {parameter} for PZT')
+
+            for device in ["MAG", "PZT"]:
+                new_entry = {}
+                new_entry["Parameter"] = parameter
+                new_entry["Sensor"] = device
+                new_entry["Abs. error (s)"] = compute_mae_display(
+                    overview[device][f"{parameter} (s)"], overview[device][f"{parameter} airflow (s)"])
+                new_entry["Rel. error (%)"] = compute_mre_display(
+                    overview[device][f"{parameter} (s)"], overview[device][f"{parameter} airflow (s)"])
+                new_entry["R^2"], _, linreg = compute_r2_sse(
+                    overview[device][f"{parameter} (s)"], overview[device][f"{parameter} airflow (s)"])
+                new_entry["Slope"], new_entry["Intercept"] = f"{linreg.slope:.2f}", f"{linreg.intercept:.2f}"
+                # new_entry["Bias (s)"], new_entry["Variability (s)"] = bland_altman_analysis(
+                #     overview[device][f"{parameter} (s)"], overview[device][f"{parameter} airflow (s)"])
+
+                breath_parameters.loc[len(breath_parameters)] = new_entry
+
+    return breath_parameters
+
+
+def get_breath_parameters_performance(overview, target):
+
+    if target in ["ID", "Activity"]:
+        breath_parameters = pd.DataFrame(columns=[
+            target, "Sensor", "MAE Ti (s)", "MRE Ti (%)", "MAE Te (s)", "MRE Te (%)", "MAE Tb (s)", "MRE Tb (%)"])
+        for key in overview.keys():
+            for device in ["MAG", "PZT"]:
+                new_entry = {}
+                new_entry[target] = key
+                new_entry["Sensor"] = device
+                new_entry["MAE Ti (s)"], new_entry["MAE Te (s)"], new_entry["MAE Tb (s)"] = compute_mae(overview[key][device]["tI (s)"], overview[key][device]["tI airflow (s)"]), compute_mae(
+                    overview[key][device]["tE (s)"], overview[key][device]["tE airflow (s)"]), compute_mae(overview[key][device]["tB (s)"], overview[key][device]["tB airflow (s)"])
+                new_entry["MRE Ti (%)"], new_entry["MRE Te (%)"], new_entry["MRE Tb (%)"] = compute_mre(overview[key][device]["tI (s)"], overview[key][device]["tI airflow (s)"]), compute_mre(
+                    overview[key][device]["tE (s)"], overview[key][device]["tE airflow (s)"]), compute_mre(overview[key][device]["tB (s)"], overview[key][device]["tB airflow (s)"])
+                breath_parameters.loc[len(breath_parameters)] = new_entry
+
+    elif target == "both":
+        breath_parameters = pd.DataFrame(columns=[
+            "ID", "Activity", "Sensor", "MAE Ti (s)", "MRE Ti (%)", "MAE Te (s)", "MRE Te (%)", "MAE Tb (s)", "MRE Tb (%)"])
+        for id in overview.keys():
+            for activity in overview[id].keys():
+                for device in ["MAG", "PZT"]:
+                    new_entry = {}
+                    new_entry["ID"] = id
+                    new_entry["Activity"] = activity
+                    new_entry["Sensor"] = device
+                    new_entry["MAE Ti (s)"], new_entry["MAE Te (s)"], new_entry["MAE Tb (s)"] = compute_mae(overview[id][activity][device]["tI (s)"], overview[id][activity][device]["tI airflow (s)"]), compute_mae(
+                        overview[id][activity][device]["tE (s)"], overview[id][activity][device]["tE airflow (s)"]), compute_mae(overview[id][activity][device]["tB (s)"], overview[id][activity][device]["tB airflow (s)"])
+                    new_entry["MRE Ti (%)"], new_entry["MRE Te (%)"], new_entry["MRE Tb (%)"] = compute_mre(overview[id][activity][device]["tI (s)"], overview[id][activity][device]["tI airflow (s)"]), compute_mre(
+                        overview[id][activity][device]["tE (s)"], overview[id][activity][device]["tE airflow (s)"]), compute_mre(overview[id][activity][device]["tB (s)"], overview[id][activity][device]["tB airflow (s)"])
                     breath_parameters.loc[len(breath_parameters)] = new_entry
 
     else:
@@ -136,8 +197,6 @@ def get_breath_parameters_performance(overview, target):
                 new_entry["R^2"], _, linreg = compute_r2_sse(
                     overview[device][f"{parameter} (s)"], overview[device][f"{parameter} airflow (s)"])
                 new_entry["Slope"], new_entry["Intercept"] = f"{linreg.slope:.2f}", f"{linreg.intercept:.2f}"
-                # new_entry["Bias (s)"], new_entry["Variability (s)"] = bland_altman_analysis(
-                #     overview[device][f"{parameter} (s)"], overview[device][f"{parameter} airflow (s)"])
 
                 breath_parameters.loc[len(breath_parameters)] = new_entry
 
@@ -146,12 +205,26 @@ def get_breath_parameters_performance(overview, target):
 
 def compute_mae(test_param, target_param):
     if len(test_param) == 0:
+        return np.nan
+    abs_error = np.abs(np.array(test_param) - np.array(target_param))
+    return np.mean(abs_error)
+
+
+def compute_mae_display(test_param, target_param):
+    if len(test_param) == 0:
         return "nan , nan"
     abs_error = np.abs(np.array(test_param) - np.array(target_param))
     return f"{np.mean(abs_error):.2f} $\pm$ {np.std(abs_error):.2f}"
 
 
 def compute_mre(test_param, target_param):
+    if len(test_param) == 0:
+        return None
+    abs_error = np.abs(np.array(test_param) - np.array(target_param))
+    return np.mean(abs_error/np.array(target_param)) * 100
+
+
+def compute_mre_display(test_param, target_param):
     if len(test_param) == 0:
         return "nan , nan"
     abs_error = np.abs(np.array(test_param) - np.array(target_param))
